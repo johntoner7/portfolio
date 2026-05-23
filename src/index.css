@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --background: #0b1118;
+  --foreground: #f1f5f9;
+  --color-page: 11 17 24;
+  --color-surface: 18 25 34;
+  --color-ocean: 37 99 235;
+  --color-env: 22 163 74;
+  --color-ink: 241 245 249;
+  --color-muted: 148 163 184;
+  --color-divider: 32 48 66;
+}
+
+html.light {
+  color-scheme: light;
+  --background: #f5f7fa;
+  --foreground: #0f172a;
+  --color-page: 245 247 250;
+  --color-surface: 255 255 255;
+  --color-ocean: 37 99 235;
+  --color-env: 21 128 61;
+  --color-ink: 15 23 42;
+  --color-muted: 71 85 105;
+  --color-divider: 203 213 225;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 20%),
+    linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 96%, black 4%) 42%, color-mix(in srgb, var(--background) 92%, black 8%) 100%);
+  color: var(--foreground);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.18;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cg fill='none' stroke='%2394a3b8' stroke-width='1.2'%3E%3Cellipse cx='300' cy='300' rx='280' ry='140'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='112'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='86'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='62'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='42'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='26'/%3E%3Cellipse cx='300' cy='300' rx='40' ry='14'/%3E%3Cellipse cx='300' cy='300' rx='280' ry='200' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='160' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='122' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='88' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='58' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='34' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='260' ry='170' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='220' ry='130' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='180' ry='96' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='140' ry='68' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='100' ry='44' transform='rotate(60 300 300)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 600px 600px;
+}
+
+html.light body::before {
+  opacity: 0.1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cg fill='none' stroke='%230f172a' stroke-width='1'%3E%3Cellipse cx='300' cy='300' rx='280' ry='140'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='112'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='86'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='62'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='42'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='26'/%3E%3Cellipse cx='300' cy='300' rx='40' ry='14'/%3E%3Cellipse cx='300' cy='300' rx='280' ry='200' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='160' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='122' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='88' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='58' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='34' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='260' ry='170' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='220' ry='130' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='180' ry='96' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='140' ry='68' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='100' ry='44' transform='rotate(60 300 300)'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.3);
+  color: var(--foreground);
+}
+
+@layer base {
+  body {
+    @apply font-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+
+  a {
+    @apply transition-colors duration-200;
+  }
+}

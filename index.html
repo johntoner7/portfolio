@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Portfolio website for John Toner, a full stack engineer building climate and environmental data tools." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>John Toner</title>
+    <script>
+      (() => {
+        try {
+          const storedTheme = localStorage.getItem('theme');
+          const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+          const shouldUseLight = storedTheme ? storedTheme === 'light' : prefersLight;
+          document.documentElement.classList.toggle('light', shouldUseLight);
+        } catch (error) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
