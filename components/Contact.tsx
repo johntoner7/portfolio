@@ -1,5 +1,8 @@
 import { Mail } from "lucide-react";
 
+import { MotionSection } from "@/components/MotionSection";
+import { siteData } from "@/lib/data";
+
 function GithubIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
@@ -15,9 +18,6 @@ function LinkedinIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-import { MotionSection } from "@/components/MotionSection";
-import { siteData } from "@/lib/data";
 
 export function Contact() {
   return (

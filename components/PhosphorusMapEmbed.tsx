@@ -1,28 +1,14 @@
-"use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { ExternalLink, MapPinned, RefreshCw } from "lucide-react";
 
-import { MotionSection } from "@/components/MotionSection";
-import { MAPBOX_TOKEN, fetchFarmPolygons, fetchRiverSegments, fetchStationSeries, fetchStations, type StationCollection, type StationFeature, type StationTimeSeries } from "@/lib/riverApi";
+import { MAPBOX_TOKEN, fetchFarmPolygons, fetchRiverSegments, fetchStationSeries, fetchStations, type StationCollection, type StationTimeSeries } from "@/lib/riverApi";
 
-type Point = { x: number; y: number };
-
-function stationColor(value: number | null) {
-  if (value == null) {
-    return "#cbd5e1";
-  }
-  if (value < 0.035) {
-    return "#38bdf8";
-  }
-  if (value < 0.1) {
-    return "#f59e0b";
-  }
-  return "#dc2626";
-}
+const MAP_STYLE = "mapbox://styles/mapbox/light-v11";
+const MAP_CENTER: [number, number] = [-6.7, 54.63];
+const MAP_ZOOM = 7.8;
 
 function formatValue(value: number | null | undefined) {
   if (value == null) {
@@ -127,7 +113,6 @@ export function PhosphorusMapEmbed() {
   const [stations, setStations] = useState<StationCollection | null>(null);
   const [riverSegments, setRiverSegments] = useState<GeoJSON.FeatureCollection | null>(null);
   const [farmPolygons, setFarmPolygons] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [selectedStation, setSelectedStation] = useState<StationFeature | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<StationTimeSeries | null>(null);
   const [loadingSeries, setLoadingSeries] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,9 +182,9 @@ export function PhosphorusMapEmbed() {
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [-6.7, 54.63],
-      zoom: 7.8,
+      style: MAP_STYLE,
+      center: MAP_CENTER,
+      zoom: MAP_ZOOM,
       attributionControl: false,
     });
     mapRef.current = map;
@@ -293,7 +278,7 @@ export function PhosphorusMapEmbed() {
       const farmPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
       farmPopupRef.current = farmPopup;
 
-      const setFarmTooltip = (event: mapboxgl.MapLayerMouseEvent) => {
+      const setFarmTooltip = (event: mapboxgl.MapMouseEvent) => {
         const feature = event.features?.[0];
         if (!feature) {
           farmPopup.remove();
@@ -380,8 +365,6 @@ export function PhosphorusMapEmbed() {
         if (!stationCode) {
           return;
         }
-        const selected = stations?.features.find((item) => item.properties.station_code === stationCode) ?? null;
-        setSelectedStation(selected);
         setLoadingSeries(true);
         try {
           const series = await fetchStationSeries(stationCode);
@@ -505,7 +488,6 @@ export function PhosphorusMapEmbed() {
         <button
           type="button"
           onClick={() => {
-            setSelectedStation(null);
             setSelectedSeries(null);
             setError(null);
           }}

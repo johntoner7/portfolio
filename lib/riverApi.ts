@@ -1,7 +1,9 @@
+const DEFAULT_API_BASE = "https://lough-neagh-production.up.railway.app";
+
 function normalizeBaseUrl(value: string) {
   const trimmed = value.trim().replace(/\/+$/, "");
   if (!trimmed) {
-    return "https://lough-neagh-production.up.railway.app";
+    return DEFAULT_API_BASE;
   }
   if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
@@ -9,7 +11,7 @@ function normalizeBaseUrl(value: string) {
   return `https://${trimmed}`;
 }
 
-export const RIVERS_API_BASE = normalizeBaseUrl(import.meta.env.VITE_RIVERS_API_BASE_URL || "https://lough-neagh-production.up.railway.app");
+export const RIVERS_API_BASE = normalizeBaseUrl(import.meta.env.VITE_RIVERS_API_BASE_URL || DEFAULT_API_BASE);
 export const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN?.trim() || "";
 
 export type StationProperties = {

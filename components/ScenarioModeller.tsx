@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
 
@@ -7,7 +5,6 @@ import {
   AGRICULTURE_PROJECTION,
   AGRI_GAP,
   AGRI_TARGET_2030,
-  AD_POTENTIAL_KT,
   BOVAER_EFFICACY,
   COMMITTED_BASELINE_KT,
   DAIRY_ENTERIC_KT,
