@@ -1,16 +1,8 @@
-import { Suspense, lazy } from "react";
-
 import { MotionSection } from "@/components/MotionSection";
+import { ScenarioModeller } from "@/components/ScenarioModeller";
+import { PhosphorusMapEmbed } from "@/components/PhosphorusMapEmbed";
 
-const EMBEDS_ENABLED = import.meta.env.VITE_ENABLE_EMBEDS === "true";
-
-const ScenarioModeller = lazy(() =>
-  import("@/components/ScenarioModeller").then((module) => ({ default: module.ScenarioModeller })),
-);
-
-const PhosphorusMapEmbed = lazy(() =>
-  import("@/components/PhosphorusMapEmbed").then((module) => ({ default: module.PhosphorusMapEmbed })),
-);
+const EMBEDS_ENABLED = import.meta.env.VITE_ENABLE_EMBEDS !== "false";
 
 export function EmbedsSection() {
   if (!EMBEDS_ENABLED) return null;
@@ -23,27 +15,9 @@ export function EmbedsSection() {
       </div>
 
       <div className="flex flex-col gap-6">
-        <Suspense fallback={<EmbedFallback title="Scenario modeller" />}>
-          <ScenarioModeller />
-        </Suspense>
-        <Suspense fallback={<EmbedFallback title="Phosphorus map" />}>
-          <PhosphorusMapEmbed />
-        </Suspense>
+        <ScenarioModeller />
+        <PhosphorusMapEmbed />
       </div>
     </MotionSection>
-  );
-}
-
-function EmbedFallback({ title }: { title: string }) {
-  return (
-    <article className="rounded-[2rem] border border-divider bg-surface/70 p-6 shadow-glow sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ocean">Loading</p>
-      <h3 className="mt-2 text-2xl text-ink">{title}</h3>
-      <div className="mt-6 space-y-3">
-        <div className="h-4 w-2/3 rounded-full bg-divider/80" />
-        <div className="h-4 w-1/2 rounded-full bg-divider/70" />
-        <div className="h-[280px] rounded-2xl border border-divider bg-page/60" />
-      </div>
-    </article>
   );
 }
