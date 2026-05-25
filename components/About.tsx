@@ -11,7 +11,7 @@ export function About() {
     if (!selectedItem) {
       return null;
     }
-    return siteData.about.usageNotes[selectedItem.item] ?? null;
+    return (siteData.about.usageNotes as Record<string, string>)[selectedItem.item] ?? null;
   }, [selectedItem]);
 
   return (

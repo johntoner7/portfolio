@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler,
+} from "chart.js";
+import annotationPlugin from "chartjs-plugin-annotation";
+import { Line } from "react-chartjs-2";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { ExternalLink, MapPinned, RefreshCw } from "lucide-react";
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, annotationPlugin);
 
 import { MAPBOX_TOKEN, fetchFarmPolygons, fetchRiverSegments, fetchStationSeries, fetchStations, type StationCollection, type StationTimeSeries } from "@/lib/riverApi";
 
@@ -17,90 +30,103 @@ function formatValue(value: number | null | undefined) {
   return `${value.toFixed(3)} mg/l`;
 }
 
+const WFD_THRESHOLD = 0.035;
+
 function Sparkline({ series }: { series: StationTimeSeries["series"] }) {
-  const width = 320;
-  const height = 162;
-  const padT = 8;
-  const padB = 34;
-  const padL = 38;
-  const padR = 8;
-  const chartW = width - padL - padR;
-  const chartH = height - padT - padB;
+  const labels = useMemo(() => series.map((p) => String(p.year)), [series]);
 
-  const values = series
-    .flatMap((p) => [p.annual_mean_p_sol, p.rolling_mean_5yr])
-    .filter((v): v is number => typeof v === "number");
-  const min = Math.max(0, Math.min(...values) * 0.92);
-  const max = Math.max(...values) * 1.08;
-  const years = series.map((p) => p.year);
-  const xS = (year: number) =>
-    padL + ((year - years[0]) / (years[years.length - 1] - years[0] || 1)) * chartW;
-  const yS = (v: number) => padT + chartH - ((v - min) / (max - min || 1)) * chartH;
+  const data = useMemo(
+    () => ({
+      labels,
+      datasets: [
+        {
+          label: "Annual mean",
+          data: series.map((p) => p.annual_mean_p_sol),
+          borderColor: "#c0551a",
+          backgroundColor: "rgba(192,85,26,0.06)",
+          borderWidth: 1.5,
+          tension: 0.2,
+          fill: true,
+          pointRadius: series.map((p) => (p.sparse_year ? 3 : 2)),
+          pointBackgroundColor: series.map((p) => (p.sparse_year ? "transparent" : "#c0551a")),
+          pointBorderColor: "#c0551a",
+          pointBorderWidth: 1.5,
+          spanGaps: false,
+        },
+        {
+          label: "5-yr rolling mean",
+          data: series.map((p) => p.rolling_mean_5yr),
+          borderColor: "rgba(136,134,128,0.7)",
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false,
+          spanGaps: true,
+        },
+      ],
+    }),
+    [series, labels],
+  );
 
-  const linePath = (key: "annual_mean_p_sol" | "rolling_mean_5yr") => {
-    const parts: string[] = [];
-    let needsMove = true;
-    for (const p of series) {
-      const v = p[key];
-      if (v == null) { needsMove = true; continue; }
-      parts.push(`${needsMove ? "M" : "L"}${xS(p.year)},${yS(v)}`);
-      needsMove = false;
-    }
-    return parts.join(" ");
-  };
-
-  const fillPath = () => {
-    const pts = series.filter((p) => p.annual_mean_p_sol != null);
-    if (pts.length < 2) return "";
-    const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${xS(p.year)},${yS(p.annual_mean_p_sol!)}`).join(" ");
-    const baseY = yS(min);
-    return `${line} L${xS(pts[pts.length - 1].year)},${baseY} L${xS(pts[0].year)},${baseY} Z`;
-  };
-
-  const rawStep = (max - min) / 4;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
-  const step = Math.ceil(rawStep / magnitude) * magnitude || 0.05;
-  const yTicks: number[] = [];
-  for (let v = Math.ceil(min / step) * step; v <= max + 0.0001; v = Math.round((v + step) * 10000) / 10000) {
-    yTicks.push(v);
-  }
-
-  const xTickCount = Math.min(6, years.length);
-  const xTicks = Array.from({ length: xTickCount }, (_, i) =>
-    years[Math.round((i * (years.length - 1)) / (xTickCount - 1 || 1))]
-  ).filter((y, i, arr) => arr.indexOf(y) === i);
-
-  const showThreshold = min <= 0.035 && 0.035 <= max;
+  const options = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: "index" as const,
+          intersect: false,
+          callbacks: {
+            label: (ctx: { dataset: { label?: string }; parsed: { y: number | null } }) => {
+              const v = ctx.parsed.y;
+              return `${ctx.dataset.label}: ${v != null ? v.toFixed(3) : "—"} mg/l`;
+            },
+          },
+        },
+        annotation: {
+          annotations: {
+            threshold: {
+              type: "line" as const,
+              yMin: WFD_THRESHOLD,
+              yMax: WFD_THRESHOLD,
+              borderColor: "#fd8d3c",
+              borderWidth: 1,
+              borderDash: [4, 4],
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            font: { size: 9 },
+            color: "#94a3b8",
+            maxTicksLimit: 7,
+            maxRotation: 0,
+          },
+        },
+        y: {
+          grid: { color: "rgba(100,116,139,0.12)" },
+          ticks: {
+            font: { size: 9 },
+            color: "#94a3b8",
+            callback: (v: number | string) => Number(v).toFixed(2),
+          },
+          min: 0,
+        },
+      },
+      interaction: { mode: "index" as const, intersect: false },
+    }),
+    [],
+  );
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="Station phosphorus sparkline">
-      {yTicks.map((tick) => (
-        <line key={tick} x1={padL} y1={yS(tick)} x2={padL + chartW} y2={yS(tick)} stroke="rgba(100,116,139,0.12)" strokeWidth="1" />
-      ))}
-      {showThreshold && (
-        <line x1={padL} y1={yS(0.035)} x2={padL + chartW} y2={yS(0.035)} stroke="#fd8d3c" strokeWidth="1" strokeDasharray="4 4" />
-      )}
-      <path d={fillPath()} fill="rgba(192,85,26,0.07)" />
-      <path d={linePath("annual_mean_p_sol")} fill="none" stroke="#c0551a" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      <path d={linePath("rolling_mean_5yr")} fill="none" stroke="rgba(136,134,128,0.8)" strokeWidth="1.5" strokeDasharray="4 3" strokeLinejoin="round" strokeLinecap="round" />
-      {series.map((p) =>
-        p.annual_mean_p_sol != null ? (
-          <circle key={p.year} cx={xS(p.year)} cy={yS(p.annual_mean_p_sol)} r="1.8" fill="#c0551a" />
-        ) : null
-      )}
-      <text transform={`translate(7, ${padT + chartH / 2}) rotate(-90)`} textAnchor="middle" fontSize="9" fill="rgb(148,163,184)">mg/l</text>
-      {yTicks.map((tick) => (
-        <text key={tick} x={padL - 5} y={yS(tick) + 3} textAnchor="end" fontSize="9" fill="rgb(148,163,184)">
-          {tick.toFixed(2)}
-        </text>
-      ))}
-      {xTicks.map((year) => (
-        <text key={year} x={xS(year)} y={height - padB + 16} textAnchor="middle" fontSize="9" fill="rgb(148,163,184)">
-          {year}
-        </text>
-      ))}
-      <text x={padL + chartW / 2} y={height - 3} textAnchor="middle" fontSize="9" fill="rgb(148,163,184)">Year</text>
-    </svg>
+    <div style={{ height: 162, width: "100%" }}>
+      <Line data={data} options={options as Parameters<typeof Line>[0]["options"]} />
+    </div>
   );
 }
 
@@ -284,6 +310,11 @@ export function PhosphorusMapEmbed() {
           farmPopup.remove();
           return;
         }
+        const stationUnderCursor = map.queryRenderedFeatures(event.point, { layers: ["stations-circle"] });
+        if (stationUnderCursor.length > 0) {
+          farmPopup.remove();
+          return;
+        }
 
         const properties = feature.properties as Record<string, unknown>;
         const wardName = typeof properties.ward_name === "string" ? properties.ward_name : "Farm census ward";
@@ -344,6 +375,7 @@ export function PhosphorusMapEmbed() {
 
       map.on("mouseenter", "stations-circle", () => {
         map.getCanvas().style.cursor = "pointer";
+        farmPopup.remove();
       });
       map.on("mouseleave", "stations-circle", () => {
         map.getCanvas().style.cursor = "";
