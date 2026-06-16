@@ -127,7 +127,7 @@ export const siteData = {
       description:
         "React and Tailwind site with Sanity CMS so the client can manage content without touching code. Contact form with email delivery via Resend.",
       stack: ["React", "TypeScript", "Sanity CMS", "Resend", "Vercel"],
-      links: [{ label: "Live site", href: "https://pen2papertutor.com" }],
+      links: [{ label: "Live site", href: "https://pen2papertutoring.com" }],
     },
   ] satisfies Project[],
   stats: [
