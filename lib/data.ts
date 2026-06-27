@@ -40,6 +40,7 @@ export const siteData = {
       { label: "About", href: "#about" },
       { label: "Projects", href: "#projects" },
       { label: "Contact", href: "#contact" },
+      { label: "Photos", href: "/photos" },
     ] satisfies NavLink[],
   },
   hero: {

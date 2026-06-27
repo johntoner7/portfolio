@@ -1,0 +1,29 @@
+export function YearDivider({ year }: { year: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "14px",
+        margin: "52px 0 36px",
+        position: "relative",
+        zIndex: 7,
+      }}
+    >
+      <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }} />
+      <span
+        style={{
+          fontFamily: "'Lora', Georgia, serif",
+          fontWeight: 400,
+          fontStyle: "italic",
+          fontSize: "13px",
+          letterSpacing: "0.08em",
+          color: "rgba(255,255,255,0.85)",
+        }}
+      >
+        {year}
+      </span>
+      <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.2)" }} />
+    </div>
+  );
+}
