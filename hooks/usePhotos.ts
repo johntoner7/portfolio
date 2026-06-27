@@ -43,7 +43,7 @@ export function usePhotos(): PhotoYear[] {
       groups: Array.from(groupMap.entries()).map(([groupName, groupPhotos]) => ({
         groupName,
         photos: groupPhotos.slice().sort((a, b) =>
-          a.metadata.dateTaken.localeCompare(b.metadata.dateTaken)
+          b.metadata.dateTaken.localeCompare(a.metadata.dateTaken)
         ),
       })),
     }));

@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --font-syne: "Syne", sans-serif;
+  --font-dm-sans: "DM Sans", sans-serif;
   color-scheme: dark;
   --background: #0b1118;
   --foreground: #f1f5f9;

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Photo } from "@/hooks/usePhotos";
 import { getCloudinaryUrl } from "@/utils/cloudinary";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface LightboxProps {
   photo: Photo;
@@ -15,6 +16,7 @@ export function Lightbox({ photo, groupPhotos, onClose }: LightboxProps) {
     groupPhotos.findIndex((p) => p.id === photo.id)
   );
   const current = groupPhotos[currentIndex];
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -91,95 +93,120 @@ export function Lightbox({ photo, groupPhotos, onClose }: LightboxProps) {
           <X size={18} strokeWidth={2.5} />
         </button>
 
-        {/* Photo + nav row */}
+        {/* Photo + nav */}
         <div
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             gap: 16,
-            padding: "0 16px",
+            padding: isMobile ? "0 8px" : "0 16px",
             width: "100%",
-            maxWidth: 640,
+            maxWidth: isMobile ? "100%" : 640,
             boxSizing: "border-box",
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Prev button — always in layout so photo stays centred */}
-          <div style={{ width: 52, flexShrink: 0 }}>
-            {canGoPrev && (
+          {/* On desktop: side-by-side [prev] [photo] [next] */}
+          {/* On mobile: photo full-width, buttons below */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: isMobile ? 0 : 16,
+              width: "100%",
+            }}
+          >
+            {!isMobile && (
+              <div style={{ width: 52, flexShrink: 0 }}>
+                {canGoPrev && (
+                  <button style={navBtn} onClick={() => setCurrentIndex((i) => i - 1)} aria-label="Previous photo">
+                    <ChevronLeft size={22} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Photo */}
+            <motion.div
+              key={current.id}
+              layoutId={`photo-${current.id}`}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(_, info) => {
+                if (info.offset.x < -60 && canGoNext) setCurrentIndex((i) => i + 1);
+                if (info.offset.x > 60 && canGoPrev) setCurrentIndex((i) => i - 1);
+              }}
+              initial={{ rotate: 0, scale: 0.92, y: 20 }}
+              animate={{ rotate: 0, scale: 1, y: 0 }}
+              transition={{
+                layout: { type: "spring", stiffness: 320, damping: 30 },
+                scale: { type: "spring", stiffness: 320, damping: 28 },
+                y: { type: "spring", stiffness: 320, damping: 28 },
+              }}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                background: "linear-gradient(160deg, #ede5ce 0%, #e8ddc4 60%, #e2d6ba 100%)",
+                padding: isMobile ? "10px 10px 36px" : "12px 12px 40px",
+                borderRadius: 2,
+                boxShadow: "0 40px 100px rgba(0,0,0,0.85), 0 8px 24px rgba(0,0,0,0.5)",
+                cursor: "grab",
+              }}
+            >
+              <img
+                src={getCloudinaryUrl(current.cloudinaryId, 1200)}
+                alt={current.caption || current.group}
+                style={{ display: "block", width: "100%", height: "auto", borderRadius: 1 }}
+              />
+              {current.caption && (
+                <p
+                  style={{
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontStyle: "italic",
+                    fontSize: "12px",
+                    color: "#6b5a3e",
+                    marginTop: 10,
+                    textAlign: "center",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  {current.caption}
+                </p>
+              )}
+            </motion.div>
+
+            {!isMobile && (
+              <div style={{ width: 52, flexShrink: 0 }}>
+                {canGoNext && (
+                  <button style={navBtn} onClick={() => setCurrentIndex((i) => i + 1)} aria-label="Next photo">
+                    <ChevronRight size={22} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile nav buttons below photo */}
+          {isMobile && (
+            <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
               <button
-                style={navBtn}
-                onClick={() => setCurrentIndex((i) => i - 1)}
+                style={{ ...navBtn, opacity: canGoPrev ? 1 : 0.25 }}
+                onClick={() => canGoPrev && setCurrentIndex((i) => i - 1)}
                 aria-label="Previous photo"
               >
                 <ChevronLeft size={22} strokeWidth={2.5} />
               </button>
-            )}
-          </div>
-
-          {/* Photo */}
-          <motion.div
-            key={current.id}
-            layoutId={`photo-${current.id}`}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
-            onDragEnd={(_, info) => {
-              if (info.offset.x < -60 && canGoNext) setCurrentIndex((i) => i + 1);
-              if (info.offset.x > 60 && canGoPrev) setCurrentIndex((i) => i - 1);
-            }}
-            /* Picking-up feel: photo straightens out and lifts as it expands */
-            initial={{ rotate: 0, scale: 0.92, y: 20 }}
-            animate={{ rotate: 0, scale: 1, y: 0 }}
-            transition={{
-              layout: { type: "spring", stiffness: 320, damping: 30 },
-              scale: { type: "spring", stiffness: 320, damping: 28 },
-              y: { type: "spring", stiffness: 320, damping: 28 },
-            }}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              background: "linear-gradient(160deg, #ede5ce 0%, #e8ddc4 60%, #e2d6ba 100%)",
-              padding: "12px 12px 40px",
-              borderRadius: 2,
-              boxShadow: "0 40px 100px rgba(0,0,0,0.85), 0 8px 24px rgba(0,0,0,0.5)",
-              cursor: "grab",
-            }}
-          >
-            <img
-              src={getCloudinaryUrl(current.cloudinaryId, 1200)}
-              alt={current.caption || current.group}
-              style={{ display: "block", width: "100%", height: "auto", borderRadius: 1 }}
-            />
-            {current.caption && (
-              <p
-                style={{
-                  fontFamily: "'Lora', Georgia, serif",
-                  fontStyle: "italic",
-                  fontSize: "12px",
-                  color: "#6b5a3e",
-                  marginTop: 10,
-                  textAlign: "center",
-                  letterSpacing: "0.03em",
-                }}
-              >
-                {current.caption}
-              </p>
-            )}
-          </motion.div>
-
-          {/* Next button */}
-          <div style={{ width: 52, flexShrink: 0 }}>
-            {canGoNext && (
               <button
-                style={navBtn}
-                onClick={() => setCurrentIndex((i) => i + 1)}
+                style={{ ...navBtn, opacity: canGoNext ? 1 : 0.25 }}
+                onClick={() => canGoNext && setCurrentIndex((i) => i + 1)}
                 aria-label="Next photo"
               >
                 <ChevronRight size={22} strokeWidth={2.5} />
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>

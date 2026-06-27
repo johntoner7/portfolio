@@ -11,13 +11,14 @@ import "./index.css";
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <motion.div
         key={location.pathname}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
+        transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+        style={{ position: "absolute", inset: 0, minHeight: "100vh" }}
       >
         <Routes location={location}>
           <Route path="/" element={<App />} />
@@ -28,10 +29,19 @@ function AnimatedRoutes() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+const root = document.getElementById("root") as HTMLElement;
+const loading = document.getElementById("loading");
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <BrowserRouter>
       <AnimatedRoutes />
     </BrowserRouter>
   </React.StrictMode>,
 );
+
+if (loading) {
+  loading.style.opacity = "0";
+  loading.style.pointerEvents = "none";
+  setTimeout(() => loading.remove(), 350);
+}
