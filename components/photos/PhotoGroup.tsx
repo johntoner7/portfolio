@@ -11,8 +11,8 @@ interface PhotoGroupProps {
 
 // Vertical space allocated per photo. Photos scatter ±80px within their slot,
 // so slots need enough room that photos don't completely swamp each other.
-const SLOT_HEIGHT = 185;
-const BOTTOM_PAD = 120;
+const SLOT_HEIGHT = 320;
+const BOTTOM_PAD = 180;
 
 export function PhotoGroup({ photos, indexOffset }: PhotoGroupProps) {
   const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);

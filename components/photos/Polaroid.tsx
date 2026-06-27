@@ -70,7 +70,7 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
         {/* Photo image */}
         <div style={{ position: "relative", overflow: "hidden", borderRadius: 1 }}>
           <img
-            src={getCloudinaryUrl(photo.cloudinaryId, 800)}
+            src={getCloudinaryUrl(photo.cloudinaryId, 1200)}
             alt={photo.caption || photo.group}
             loading="lazy"
             style={{ display: "block", width: "100%", height: "auto" }}

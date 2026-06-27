@@ -36,7 +36,7 @@ export function getPhotoStyle(id: string, index: number): PhotoStyle {
   const zoneBase = isLeft ? 0 : 44;
   const x = zoneBase + seededValue(id + "x", 0, 8);
 
-  const yNudge = seededValue(id + "yn", -55, 55);
+  const yNudge = seededValue(id + "yn", -80, 80);
 
   // Rotation: index drives the sign so left/right tilts genuinely alternate.
   // Seed drives magnitude so no two photos tilt the same amount.

@@ -16,7 +16,7 @@ export function Photos() {
   let globalIndex = 0;
 
   return (
-    <div style={{ minHeight: "100vh", position: "relative", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100vh", position: "relative", overflowX: "hidden", background: "#0a0703" }}>
       <div style={{ position: "relative", margin: "0 auto", maxWidth: 760, paddingLeft: "1%", paddingRight: "1%", zIndex: 1 }}>
 
         <PhotosNav />

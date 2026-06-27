@@ -8,6 +8,7 @@ export interface Photo {
   caption: string;
   metadata: {
     dateTaken: string;
+    timeTaken: string;
     location: string;
     camera: string;
     tags: string[];

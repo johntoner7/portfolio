@@ -11,14 +11,13 @@ import "./index.css";
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       <motion.div
         key={location.pathname}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-        style={{ position: "absolute", inset: 0, minHeight: "100vh" }}
+        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       >
         <Routes location={location}>
           <Route path="/" element={<App />} />
