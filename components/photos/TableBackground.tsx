@@ -26,30 +26,28 @@ export function TableBackground({ lampY, lampOpacity }: Props) {
       {/* Table surface */}
       <div style={{ ...tableLayer, top: 0, bottom: 0, background: "#2a1a0c", zIndex: 1 }} />
 
-      {/* Wood grain — long horizontal lines, scrolls with page */}
-      <svg
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.55, zIndex: 2 }}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <filter id="grain-long">
-          <feTurbulence type="turbulence" baseFrequency="0.006 0.28" numOctaves="3" seed="12" stitchTiles="stitch" result="noise" />
-          <feColorMatrix type="saturate" values="0" result="grey" />
-          <feColorMatrix in="grey" type="matrix" values="1    0 0 0 0.10  0.75 0 0 0 0.05  0.3 0 0 0 0.01  0 0 0 1 0" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grain-long)" />
-      </svg>
+      {/* Wood grain — long horizontal lines */}
+      <div style={{ ...tableLayer, top: 0, bottom: 0, zIndex: 2, opacity: 0.55 }}>
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} xmlns="http://www.w3.org/2000/svg">
+          <filter id="grain-long">
+            <feTurbulence type="turbulence" baseFrequency="0.006 0.28" numOctaves="3" seed="12" stitchTiles="stitch" result="noise" />
+            <feColorMatrix type="saturate" values="0" result="grey" />
+            <feColorMatrix in="grey" type="matrix" values="1    0 0 0 0.10  0.75 0 0 0 0.05  0.3 0 0 0 0.01  0 0 0 1 0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain-long)" />
+        </svg>
+      </div>
 
       {/* Wood grain — fine surface texture */}
-      <svg
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.14, zIndex: 2, mixBlendMode: "overlay" }}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <filter id="grain-fine">
-          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="3" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grain-fine)" />
-      </svg>
+      <div style={{ ...tableLayer, top: 0, bottom: 0, zIndex: 2, opacity: 0.14, mixBlendMode: "overlay" }}>
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} xmlns="http://www.w3.org/2000/svg">
+          <filter id="grain-fine">
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="3" stitchTiles="stitch" />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain-fine)" />
+        </svg>
+      </div>
 
       {/* Lamp hotspot */}
       <motion.div style={{ ...tableLayer, top: 0, height: "55vh", y: lampY, opacity: lampOpacity, zIndex: 3,

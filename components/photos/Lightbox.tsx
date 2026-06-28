@@ -73,7 +73,7 @@ export function Lightbox({ photo, groupPhotos, onClose }: LightboxProps) {
           onClick={onClose}
           style={{
             position: "absolute",
-            top: 16,
+            top: isMobile ? 64 : 16,
             right: 16,
             background: "rgba(255,255,255,0.92)",
             border: "none",

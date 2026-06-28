@@ -8,7 +8,10 @@ import { Projects } from "@/components/Projects";
 
 export function App() {
   return (
-    <>
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(180deg, rgba(255,255,255,0.28), transparent 20%), linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 96%, black 4%) 42%, color-mix(in srgb, var(--background) 92%, black 8%) 100%)",
+    }}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-ink focus:outline-none"
@@ -24,6 +27,6 @@ export function App() {
         <Contact />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

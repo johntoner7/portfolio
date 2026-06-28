@@ -7,9 +7,8 @@ export function PhotosNav() {
 
   useEffect(() => {
     const onScroll = () => {
-      // Fade from fully visible at 0 to nearly invisible at 200px
-      const ratio = Math.min(window.scrollY / 200, 1);
-      setOpacity(1 - ratio * 0.75);
+      const ratio = Math.min(window.scrollY / 300, 1);
+      setOpacity(1 - ratio * 0.6);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -29,19 +28,18 @@ export function PhotosNav() {
         justifyContent: "space-between",
         zIndex: 20,
         opacity,
-        transition: "opacity 0.1s linear",
+        transition: "opacity 0.15s linear",
         pointerEvents: opacity < 0.15 ? "none" : "auto",
       }}
     >
       <Link
         to="/"
         style={{
-          fontFamily: "'Lora', Georgia, serif",
-          fontWeight: 400,
-          fontStyle: "italic",
+          fontFamily: "'Syne', sans-serif",
+          fontWeight: 500,
           fontSize: "14px",
-          letterSpacing: "0.06em",
-          color: "rgba(255,255,255,0.7)",
+          letterSpacing: "0.04em",
+          color: "rgba(255,255,255,0.9)",
           textDecoration: "none",
         }}
       >
@@ -51,11 +49,11 @@ export function PhotosNav() {
       <Link
         to="/"
         style={{
-          fontFamily: "'Lora', Georgia, serif",
+          fontFamily: "'DM Sans', sans-serif",
           fontWeight: 400,
-          fontSize: "12px",
-          letterSpacing: "0.08em",
-          color: "rgba(255,255,255,0.45)",
+          fontSize: "13px",
+          letterSpacing: "0.02em",
+          color: "rgba(255,255,255,0.65)",
           textDecoration: "none",
         }}
       >
