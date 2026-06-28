@@ -32,7 +32,7 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
       initial={{ opacity: 0, y: 20, rotate: rotation }}
       whileInView={{ opacity: 1, y: 0, rotate: rotation }}
       viewport={{ once: true, margin: "0px 0px -60px 0px" }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
       whileHover={{ scale: 1.05, y: -10, rotate: rotation * 0.4, transition: { duration: 0.15 } }}
       whileTap={{ scale: 0.97, transition: { duration: 0.08 } }}
     >
@@ -61,9 +61,10 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
         {/* Photo image */}
         <div style={{ position: "relative", overflow: "hidden", borderRadius: 1 }}>
           <img
-            src={getCloudinaryUrl(photo.cloudinaryId, 1200)}
+            src={getCloudinaryUrl(photo.cloudinaryId, 600)}
             alt={photo.caption || photo.group}
-            loading="lazy"
+            loading={index < 2 ? "eager" : "lazy"}
+            fetchPriority={index < 2 ? "high" : "auto"}
             style={{ display: "block", width: "100%", height: "auto" }}
           />
           {/* Film vignette */}

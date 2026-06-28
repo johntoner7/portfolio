@@ -17,7 +17,8 @@ function AnimatedRoutes() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+        style={{ willChange: "opacity" }}
       >
         <Routes location={location}>
           <Route path="/" element={<App />} />
