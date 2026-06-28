@@ -25,16 +25,28 @@ export function TableBackground() {
         background: "radial-gradient(ellipse 85% 70% at 50% 40%, transparent 40%, rgba(0,0,0,0.3) 100%)" }}
       />
 
-      {/* Grain — single SVG, two blend layers */}
-      <svg style={{ ...fullFixed, zIndex: 3, width: "100%", height: "100%" }} xmlns="http://www.w3.org/2000/svg">
+      {/* Fine grain */}
+      <div style={{ ...fullFixed, zIndex: 3, opacity: 0.09, mixBlendMode: "overlay" }}>
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="surface-grain">
+              <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" seed="7" stitchTiles="stitch" />
+              <feColorMatrix type="saturate" values="0" />
+            </filter>
+          </defs>
+          <rect width="100%" height="100%" filter="url(#surface-grain)" />
+        </svg>
+      </div>
+
+      {/* Coarse grain overlay */}
+      <svg style={{ ...fullFixed, zIndex: 6, width: "100%", height: "100%", opacity: 0.35, mixBlendMode: "overlay" }} xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <filter id="surface-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" seed="7" stitchTiles="stitch" />
+          <filter id="grain-overlay">
+            <feTurbulence type="fractalNoise" baseFrequency="0.68" numOctaves="3" seed="11" stitchTiles="stitch" />
             <feColorMatrix type="saturate" values="0" />
           </filter>
         </defs>
-        <rect width="100%" height="100%" filter="url(#surface-grain)" opacity="0.09" style={{ mixBlendMode: "overlay" }} />
-        <rect width="100%" height="100%" filter="url(#surface-grain)" opacity="0.35" style={{ mixBlendMode: "overlay" }} />
+        <rect width="100%" height="100%" filter="url(#grain-overlay)" />
       </svg>
 
       {/* Top fade */}
