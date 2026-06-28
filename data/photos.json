@@ -84,20 +84,6 @@
     }
   },
   {
-    "id": "056",
-    "cloudinaryId": "travel/img-1592",
-    "year": 2025,
-    "group": "Ireland",
-    "caption": "rip owen's caravan",
-    "metadata": {
-      "dateTaken": "2025-03-17",
-      "location": "",
-      "camera": "iPhone 15",
-      "tags": [],
-      "timeTaken": "20:30:04"
-    }
-  },
-  {
     "id": "057",
     "cloudinaryId": "travel/img-1911",
     "year": 2025,
@@ -228,7 +214,7 @@
     "cloudinaryId": "travel/img-2865",
     "year": 2025,
     "group": "Ireland",
-    "caption": "",
+    "caption": "rip owen's caravan",
     "metadata": {
       "dateTaken": "2025-06-20",
       "location": "Donegal, Ireland",
