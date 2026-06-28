@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { Photo } from "@/hooks/usePhotos";
 import { Polaroid } from "./Polaroid";
 import { Lightbox } from "./Lightbox";
@@ -6,19 +6,18 @@ import { Lightbox } from "./Lightbox";
 interface PhotoGroupProps {
   photos: Photo[];
   indexOffset: number;
+  isMobile: boolean;
+  slotHeight: number;
+  bottomPad: number;
 }
 
-// Vertical space allocated per photo. Photos scatter ±80px within their slot,
-// so slots need enough room that photos don't completely swamp each other.
-const isMobileDevice = () => typeof window !== "undefined" && window.innerWidth < 640;
-const SLOT_HEIGHT = isMobileDevice() ? 160 : 320;
-const BOTTOM_PAD = isMobileDevice() ? 100 : 180;
-
-export function PhotoGroup({ photos, indexOffset }: PhotoGroupProps) {
+export function PhotoGroup({ photos, indexOffset, isMobile, slotHeight, bottomPad }: PhotoGroupProps) {
   const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
 
+  const handleOpen = useCallback((photo: Photo) => setLightboxPhoto(photo), []);
+  const handleClose = useCallback(() => setLightboxPhoto(null), []);
 
-  const containerHeight = photos.length * SLOT_HEIGHT + BOTTOM_PAD;
+  const containerHeight = photos.length * slotHeight + bottomPad;
 
   return (
     <>
@@ -28,8 +27,9 @@ export function PhotoGroup({ photos, indexOffset }: PhotoGroupProps) {
             key={photo.id}
             photo={photo}
             index={indexOffset + i}
-            slotTop={i * SLOT_HEIGHT}
-            onOpen={setLightboxPhoto}
+            slotTop={i * slotHeight}
+            isMobile={isMobile}
+            onOpen={handleOpen}
           />
         ))}
       </div>
@@ -38,7 +38,7 @@ export function PhotoGroup({ photos, indexOffset }: PhotoGroupProps) {
         <Lightbox
           photo={lightboxPhoto}
           groupPhotos={photos}
-          onClose={() => setLightboxPhoto(null)}
+          onClose={handleClose}
         />
       )}
     </>

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { usePhotos } from "@/hooks/usePhotos";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { TableBackground } from "@/components/photos/TableBackground";
 import { Nav } from "@/components/Nav";
 import { YearDivider } from "@/components/photos/YearDivider";
@@ -13,6 +14,9 @@ import { getCloudinaryUrl } from "@/utils/cloudinary";
 
 export function Photos() {
   const years = usePhotos();
+  const isMobile = useIsMobile();
+  const slotHeight = isMobile ? 160 : 320;
+  const bottomPad = isMobile ? 100 : 180;
 
   // Preload the first 6 photos so they're ready when the page paints
   useEffect(() => {
@@ -59,7 +63,7 @@ export function Photos() {
                 return (
                   <div key={group.groupName}>
                     <GroupHeader groupName={group.groupName} photos={group.photos} />
-                    <PhotoGroup photos={group.photos} indexOffset={offset} />
+                    <PhotoGroup photos={group.photos} indexOffset={offset} isMobile={isMobile} slotHeight={slotHeight} bottomPad={bottomPad} />
                     {(groupIndex < yearData.groups.length - 1 || yearIndex < years.length - 1) && (
                       <TableObject seed={`${yearData.year}-${group.groupName}`} />
                     )}

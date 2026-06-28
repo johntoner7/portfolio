@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { Photo } from "@/hooks/usePhotos";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -21,7 +22,7 @@ interface GroupHeaderProps {
 }
 
 export function GroupHeader({ groupName, photos }: GroupHeaderProps) {
-  const dateRange = formatDateRange(photos);
+  const dateRange = useMemo(() => formatDateRange(photos), [photos]);
 
   return (
     <div style={{

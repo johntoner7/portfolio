@@ -17,8 +17,7 @@ export interface PhotoStyle {
   width: number;
 }
 
-export function getPhotoStyle(id: string, index: number): PhotoStyle {
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+export function getPhotoStyle(id: string, index: number, isMobile: boolean): PhotoStyle {
   const isLeft = index % 2 === 0;
 
   const zoneBase = isLeft ? 0 : 52 - (isMobile ? 6 : 0);
