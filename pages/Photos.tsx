@@ -1,35 +1,32 @@
-import { useScroll, useTransform } from "framer-motion";
 import { usePhotos } from "@/hooks/usePhotos";
 import { TableBackground } from "@/components/photos/TableBackground";
-import { PhotosNav } from "@/components/photos/PhotosNav";
+import { Nav } from "@/components/Nav";
 import { YearDivider } from "@/components/photos/YearDivider";
+import { GroupHeader } from "@/components/photos/GroupHeader";
 import { PhotoGroup } from "@/components/photos/PhotoGroup";
 import { TableObject } from "@/components/photos/TableObject";
+import { ScrollProgress } from "@/components/photos/ScrollProgress";
+import { BackToTop } from "@/components/photos/BackToTop";
 
 export function Photos() {
   const years = usePhotos();
-
-  const { scrollY } = useScroll();
-  const lampY = useTransform(scrollY, [0, 2000], [0, -70]);
-  const lampOpacity = useTransform(scrollY, [0, 600], [1, 0.7]);
-
   let globalIndex = 0;
 
   return (
-    <div style={{ minHeight: "100vh", position: "relative", overflowX: "hidden", background: "#0a0703" }}>
+    <div style={{ minHeight: "100vh", position: "relative", overflowX: "hidden", background: "var(--background)" }}>
+      <ScrollProgress />
+      <TableBackground />
+      <Nav />
+
       <div style={{ position: "relative", margin: "0 auto", maxWidth: 760, paddingLeft: "1%", paddingRight: "1%", zIndex: 1 }}>
-
-        <PhotosNav />
-        <TableBackground lampY={lampY} lampOpacity={lampOpacity} />
-
-        <div style={{ position: "relative", zIndex: 7, paddingTop: 100, paddingBottom: 160 }}>
+        <div style={{ position: "relative", zIndex: 7, paddingTop: 32, paddingBottom: 160 }}>
           <h1 style={{
             fontFamily: "'Lora', Georgia, serif",
             fontWeight: 400,
             fontStyle: "italic",
             fontSize: "15px",
             letterSpacing: "0.12em",
-            color: "rgba(255,255,255,0.75)",
+            color: "var(--foreground)",
             textAlign: "center",
             marginBottom: 64,
           }}>
@@ -44,6 +41,7 @@ export function Photos() {
                 globalIndex += group.photos.length;
                 return (
                   <div key={group.groupName}>
+                    <GroupHeader groupName={group.groupName} photos={group.photos} />
                     <PhotoGroup photos={group.photos} indexOffset={offset} />
                     {(groupIndex < yearData.groups.length - 1 || yearIndex < years.length - 1) && (
                       <TableObject seed={`${yearData.year}-${group.groupName}`} />
@@ -55,6 +53,7 @@ export function Photos() {
           ))}
         </div>
       </div>
+      <BackToTop />
     </div>
   );
 }

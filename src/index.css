@@ -43,6 +43,14 @@ body {
 /* Homepage applies its gradient on its own wrapper, not body,
    so the body stays a plain dark during page transitions */
 
+.hidden-mobile { display: flex; }
+.show-mobile   { display: none; }
+
+@media (max-width: 639px) {
+  .hidden-mobile { display: none !important; }
+  .show-mobile   { display: flex !important; }
+}
+
 body::before {
   content: "";
   position: fixed;

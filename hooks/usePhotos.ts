@@ -37,15 +37,25 @@ export function usePhotos(): PhotoYear[] {
     yearMap.get(photo.group)!.push(photo);
   }
 
+  const photoDateTime = (p: Photo) =>
+    p.metadata.dateTaken + "T" + (p.metadata.timeTaken || "00:00:00");
+
   return Array.from(byYear.entries())
-    .sort(([a], [b]) => b - a)
+    .sort(([a], [b]) => b - a)                          // year: newest first
     .map(([year, groupMap]) => ({
       year,
-      groups: Array.from(groupMap.entries()).map(([groupName, groupPhotos]) => ({
-        groupName,
-        photos: groupPhotos.slice().sort((a, b) =>
-          b.metadata.dateTaken.localeCompare(a.metadata.dateTaken)
-        ),
-      })),
+      groups: Array.from(groupMap.entries())
+        .map(([groupName, groupPhotos]) => ({
+          groupName,
+          photos: groupPhotos.slice().sort((a, b) =>
+            photoDateTime(a).localeCompare(photoDateTime(b)) // photos: oldest first
+          ),
+        }))
+        .sort((a, b) => {
+          // group: newest first — compare each group's latest photo
+          const latestA = photoDateTime(a.photos[a.photos.length - 1]);
+          const latestB = photoDateTime(b.photos[b.photos.length - 1]);
+          return latestB.localeCompare(latestA);
+        }),
     }));
 }

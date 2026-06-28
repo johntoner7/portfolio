@@ -62,7 +62,7 @@ export function Lightbox({ photo, groupPhotos, onClose }: LightboxProps) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "rgba(8,5,2,0.88)",
+          background: "rgba(var(--color-page), 0.92)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
         }}
@@ -107,16 +107,7 @@ export function Lightbox({ photo, groupPhotos, onClose }: LightboxProps) {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* On desktop: side-by-side [prev] [photo] [next] */}
-          {/* On mobile: photo full-width, buttons below */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: isMobile ? 0 : 16,
-              width: "100%",
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 0 : 16, width: "100%" }}>
             {!isMobile && (
               <div style={{ width: 52, flexShrink: 0 }}>
                 {canGoPrev && (
@@ -127,55 +118,67 @@ export function Lightbox({ photo, groupPhotos, onClose }: LightboxProps) {
               </div>
             )}
 
-            {/* Photo */}
-            <motion.div
-              key={current.id}
-              layoutId={`photo-${current.id}`}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(_, info) => {
-                if (info.offset.x < -60 && canGoNext) setCurrentIndex((i) => i + 1);
-                if (info.offset.x > 60 && canGoPrev) setCurrentIndex((i) => i - 1);
-              }}
-              initial={{ rotate: 0, scale: 0.92, y: 20 }}
-              animate={{ rotate: 0, scale: 1, y: 0 }}
-              transition={{
-                layout: { type: "spring", stiffness: 320, damping: 30 },
-                scale: { type: "spring", stiffness: 320, damping: 28 },
-                y: { type: "spring", stiffness: 320, damping: 28 },
-              }}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                background: "linear-gradient(160deg, #ede5ce 0%, #e8ddc4 60%, #e2d6ba 100%)",
-                padding: isMobile ? "10px 10px 36px" : "12px 12px 40px",
-                borderRadius: 2,
-                boxShadow: "0 40px 100px rgba(0,0,0,0.85), 0 8px 24px rgba(0,0,0,0.5)",
-                cursor: "grab",
-              }}
-            >
-              <img
-                src={getCloudinaryUrl(current.cloudinaryId, 1200)}
-                alt={current.caption || current.group}
-                style={{ display: "block", width: "100%", height: "auto", borderRadius: 1 }}
-              />
-              {current.caption && (
-                <p
-                  style={{
-                    fontFamily: "'Lora', Georgia, serif",
-                    fontStyle: "italic",
-                    fontSize: "12px",
-                    color: "#6b5a3e",
-                    marginTop: 10,
-                    textAlign: "center",
-                    letterSpacing: "0.03em",
-                  }}
-                >
-                  {current.caption}
-                </p>
-              )}
-            </motion.div>
+            {/* Photo — simple scale+fade, no layout morph */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current.id}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.15}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -50 && canGoNext) setCurrentIndex((i) => i + 1);
+                  if (info.offset.x > 50 && canGoPrev) setCurrentIndex((i) => i - 1);
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  background: "linear-gradient(160deg, #ede5ce 0%, #e8ddc4 60%, #e2d6ba 100%)",
+                  padding: isMobile ? "10px 10px 36px" : "12px 12px 44px",
+                  borderRadius: 2,
+                  boxShadow: "0 40px 100px rgba(0,0,0,0.85), 0 8px 24px rgba(0,0,0,0.5)",
+                  cursor: "grab",
+                }}
+              >
+                <img
+                  src={getCloudinaryUrl(current.cloudinaryId, 1200)}
+                  alt={current.caption || current.group}
+                  style={{ display: "block", width: "100%", height: "auto", borderRadius: 1 }}
+                />
+                {(current.caption || current.metadata?.location) && (
+                  <div style={{ marginTop: 10, textAlign: "center" }}>
+                    {current.caption && (
+                      <p style={{
+                        fontFamily: "'Lora', Georgia, serif",
+                        fontStyle: "italic",
+                        fontSize: "12px",
+                        color: "#6b5a3e",
+                        letterSpacing: "0.03em",
+                        margin: 0,
+                      }}>
+                        {current.caption}
+                      </p>
+                    )}
+                    {current.metadata?.location && (
+                      <p style={{
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: "10px",
+                        color: "#9a8a6e",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        marginTop: current.caption ? 3 : 0,
+                        margin: current.caption ? "3px 0 0" : 0,
+                      }}>
+                        {current.metadata.location}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
 
             {!isMobile && (
               <div style={{ width: 52, flexShrink: 0 }}>
@@ -188,7 +191,7 @@ export function Lightbox({ photo, groupPhotos, onClose }: LightboxProps) {
             )}
           </div>
 
-          {/* Mobile nav buttons below photo */}
+          {/* Mobile nav buttons */}
           {isMobile && (
             <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
               <button

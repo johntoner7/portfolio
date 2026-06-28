@@ -12,10 +12,10 @@ interface PolaroidProps {
 
 export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
   const { x, yNudge, rotation, width } = getPhotoStyle(photo.id, index);
+  const hasLabel = photo.caption || photo.metadata?.location;
 
   return (
     <motion.div
-      layoutId={`photo-${photo.id}`}
       onClick={() => onOpen(photo)}
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(photo); }}
@@ -39,9 +39,9 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
       <div
         style={{
           background: "linear-gradient(160deg, #ede5ce 0%, #e8ddc4 60%, #e2d6ba 100%)",
-          padding: "9px 9px 30px",
+          padding: hasLabel ? "9px 9px 10px" : "9px 9px 30px",
           borderRadius: 2,
-          boxShadow: "0 8px 28px rgba(0,0,0,0.65), 0 3px 8px rgba(0,0,0,0.4), 0 1px 2px rgba(180,120,40,0.08)",
+          boxShadow: "0 8px 28px rgba(0,0,0,0.65), 0 3px 8px rgba(0,0,0,0.4)",
           position: "relative",
           overflow: "hidden",
           transform: "perspective(500px) rotateX(3.5deg)",
@@ -49,16 +49,7 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
       >
         {/* Paper texture */}
         <svg
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            pointerEvents: "none",
-            opacity: 0.09,
-            zIndex: 1,
-            mixBlendMode: "multiply",
-          }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.09, zIndex: 1, mixBlendMode: "multiply" }}
           xmlns="http://www.w3.org/2000/svg"
         >
           <filter id={`paper-${photo.id}`}>
@@ -76,37 +67,11 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
             style={{ display: "block", width: "100%", height: "auto" }}
           />
           {/* Film vignette */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)",
-              pointerEvents: "none",
-            }}
-          />
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)", pointerEvents: "none" }} />
           {/* Warm cast */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(160,100,30,0.06)",
-              pointerEvents: "none",
-              mixBlendMode: "multiply",
-            }}
-          />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(160,100,30,0.06)", pointerEvents: "none", mixBlendMode: "multiply" }} />
           {/* Film grain */}
-          <svg
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              pointerEvents: "none",
-              opacity: 0.18,
-              mixBlendMode: "overlay",
-            }}
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.18, mixBlendMode: "overlay" }} xmlns="http://www.w3.org/2000/svg">
             <filter id={`film-${photo.id}`}>
               <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="4" seed="5" />
               <feColorMatrix type="saturate" values="0" />
@@ -115,21 +80,35 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
           </svg>
         </div>
 
-        {photo.caption && (
-          <p
-            style={{
-              fontFamily: "Courier New, monospace",
-              fontSize: "7px",
-              color: "#6b5a3e",
-              textAlign: "center",
-              marginTop: 7,
-              letterSpacing: "0.06em",
-              position: "relative",
-              zIndex: 2,
-            }}
-          >
-            {photo.caption}
-          </p>
+        {/* Caption / location */}
+        {hasLabel && (
+          <div style={{ paddingTop: 8, paddingBottom: 18, position: "relative", zIndex: 2, textAlign: "center" }}>
+            {photo.caption && (
+              <p style={{
+                fontFamily: "'Lora', Georgia, serif",
+                fontStyle: "italic",
+                fontSize: "7.5px",
+                color: "#6b5a3e",
+                letterSpacing: "0.04em",
+                margin: 0,
+                lineHeight: 1.4,
+              }}>
+                {photo.caption}
+              </p>
+            )}
+            {photo.metadata?.location && (
+              <p style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "6.5px",
+                color: "#9a8a6e",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                margin: photo.caption ? "2px 0 0" : 0,
+              }}>
+                {photo.metadata.location}
+              </p>
+            )}
+          </div>
         )}
       </div>
     </motion.div>
