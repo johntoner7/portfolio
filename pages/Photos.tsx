@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { usePhotos } from "@/hooks/usePhotos";
 import { TableBackground } from "@/components/photos/TableBackground";
 import { Nav } from "@/components/Nav";
@@ -7,9 +8,23 @@ import { PhotoGroup } from "@/components/photos/PhotoGroup";
 import { TableObject } from "@/components/photos/TableObject";
 import { ScrollProgress } from "@/components/photos/ScrollProgress";
 import { BackToTop } from "@/components/photos/BackToTop";
+import { getCloudinaryUrl } from "@/utils/cloudinary";
 
 export function Photos() {
   const years = usePhotos();
+
+  // Preload the first 6 photos so they're ready when the page paints
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640;
+    const firstPhotos = years.flatMap(y => y.groups.flatMap(g => g.photos)).slice(0, 6);
+    firstPhotos.forEach(photo => {
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "image";
+      link.href = getCloudinaryUrl(photo.cloudinaryId, isMobile ? 380 : 600);
+      document.head.appendChild(link);
+    });
+  }, []);
   let globalIndex = 0;
 
   return (

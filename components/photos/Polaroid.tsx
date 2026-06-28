@@ -3,6 +3,8 @@ import type { Photo } from "@/hooks/usePhotos";
 import { getCloudinaryUrl } from "@/utils/cloudinary";
 import { getPhotoStyle } from "@/utils/photoStyle";
 
+const isMobileViewport = () => typeof window !== "undefined" && window.innerWidth < 640;
+
 interface PolaroidProps {
   photo: Photo;
   index: number;
@@ -61,7 +63,7 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
         {/* Photo image */}
         <div style={{ position: "relative", overflow: "hidden", borderRadius: 1 }}>
           <img
-            src={getCloudinaryUrl(photo.cloudinaryId, 600)}
+            src={getCloudinaryUrl(photo.cloudinaryId, isMobileViewport() ? 380 : 600)}
             alt={photo.caption || photo.group}
             loading={index < 2 ? "eager" : "lazy"}
             fetchPriority={index < 2 ? "high" : "auto"}
