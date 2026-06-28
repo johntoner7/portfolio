@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import photosData from "@/data/photos.json";
 
 export interface Photo {
@@ -26,6 +27,7 @@ export interface PhotoYear {
 }
 
 export function usePhotos(): PhotoYear[] {
+  return useMemo(() => {
   const photos = photosData as Photo[];
 
   const byYear = new Map<number, Map<string, Photo[]>>();
@@ -58,4 +60,5 @@ export function usePhotos(): PhotoYear[] {
           return latestB.localeCompare(latestA);
         }),
     }));
+  }, []);
 }

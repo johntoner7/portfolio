@@ -8,6 +8,7 @@ import { PhotoGroup } from "@/components/photos/PhotoGroup";
 import { TableObject } from "@/components/photos/TableObject";
 import { ScrollProgress } from "@/components/photos/ScrollProgress";
 import { BackToTop } from "@/components/photos/BackToTop";
+import { SharedFilters } from "@/components/photos/SharedFilters";
 import { getCloudinaryUrl } from "@/utils/cloudinary";
 
 export function Photos() {
@@ -29,6 +30,7 @@ export function Photos() {
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", overflowX: "hidden", background: "var(--background)" }}>
+      <SharedFilters />
       <ScrollProgress />
       <TableBackground />
       <Nav />

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Photo } from "@/hooks/usePhotos";
 import { Polaroid } from "./Polaroid";
 import { Lightbox } from "./Lightbox";
-import { getCloudinaryUrl } from "@/utils/cloudinary";
 
 interface PhotoGroupProps {
   photos: Photo[];
@@ -18,12 +17,6 @@ const BOTTOM_PAD = isMobileDevice() ? 100 : 180;
 export function PhotoGroup({ photos, indexOffset }: PhotoGroupProps) {
   const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
 
-  useEffect(() => {
-    for (const photo of photos) {
-      const img = new Image();
-      img.src = getCloudinaryUrl(photo.cloudinaryId, 1200);
-    }
-  }, [photos]);
 
   const containerHeight = photos.length * SLOT_HEIGHT + BOTTOM_PAD;
 

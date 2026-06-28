@@ -50,14 +50,8 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
         }}
       >
         {/* Paper texture */}
-        <svg
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.09, zIndex: 1, mixBlendMode: "multiply" }}
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <filter id={`paper-${photo.id}`}>
-            <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="4" seed="2" />
-          </filter>
-          <rect width="100%" height="100%" filter={`url(#paper-${photo.id})`} />
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.09, zIndex: 1, mixBlendMode: "multiply" }} xmlns="http://www.w3.org/2000/svg">
+          <rect width="100%" height="100%" filter="url(#shared-paper)" />
         </svg>
 
         {/* Photo image */}
@@ -75,11 +69,7 @@ export function Polaroid({ photo, index, slotTop, onOpen }: PolaroidProps) {
           <div style={{ position: "absolute", inset: 0, background: "rgba(160,100,30,0.06)", pointerEvents: "none", mixBlendMode: "multiply" }} />
           {/* Film grain */}
           <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.18, mixBlendMode: "overlay" }} xmlns="http://www.w3.org/2000/svg">
-            <filter id={`film-${photo.id}`}>
-              <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="4" seed="5" />
-              <feColorMatrix type="saturate" values="0" />
-            </filter>
-            <rect width="100%" height="100%" filter={`url(#film-${photo.id})`} />
+            <rect width="100%" height="100%" filter="url(#shared-film)" />
           </svg>
         </div>
 
