@@ -11,7 +11,7 @@ import "./index.css";
 function AnimatedRoutes() {
   const location = useLocation();
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="popLayout">
       <motion.div
         key={location.pathname}
         initial={{ opacity: 0 }}
