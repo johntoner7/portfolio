@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { About } from "@/components/About";
 import { EmbedsSection } from "@/components/EmbedsSection";
 import { Contact } from "@/components/Contact";
@@ -7,6 +9,14 @@ import { Nav } from "@/components/Nav";
 import { Projects } from "@/components/Projects";
 
 export function App() {
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return;
+    const target = document.querySelector(hash);
+    target?.scrollIntoView({ behavior: "smooth" });
+  }, [hash]);
+
   return (
     <div style={{
       minHeight: "100vh",

@@ -81,17 +81,22 @@ export function PhotosNav() {
         {/* Desktop nav */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }} className="hidden-mobile">
           <nav style={{ display: "flex", alignItems: "center", gap: 24 }}>
-            <Link
-              to="/"
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: "14px",
-                color: "var(--color-muted)" as string,
-                textDecoration: "none",
-              }}
-            >
-              ← Back
-            </Link>
+            {siteData.nav.links
+              .filter((link) => link.href.startsWith("#"))
+              .map((link) => (
+                <Link
+                  key={link.href}
+                  to={`/${link.href}`}
+                  style={{
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: "14px",
+                    color: "var(--color-muted)" as string,
+                    textDecoration: "none",
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ))}
           </nav>
           <button
             onClick={toggleTheme}
@@ -169,19 +174,24 @@ export function PhotosNav() {
           WebkitBackdropFilter: "blur(20px)",
         }}>
           <div style={{ padding: "8px 24px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-            <Link
-              to="/"
-              onClick={() => setMenuOpen(false)}
-              style={{
-                padding: "10px 0",
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: "14px",
-                color: "rgba(255,255,255,0.6)",
-                textDecoration: "none",
-              }}
-            >
-              ← Back to home
-            </Link>
+            {siteData.nav.links
+              .filter((link) => link.href.startsWith("#"))
+              .map((link) => (
+                <Link
+                  key={link.href}
+                  to={`/${link.href}`}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    padding: "10px 0",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontSize: "14px",
+                    color: "rgba(255,255,255,0.6)",
+                    textDecoration: "none",
+                  }}
+                >
+                  {link.label}
+                </Link>
+              ))}
           </div>
         </div>
       )}

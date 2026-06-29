@@ -11,6 +11,8 @@ interface PolaroidProps {
   onOpen: (photo: Photo) => void;
 }
 
+const showLabels = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("labels");
+
 export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidProps) {
   const { x, yNudge, rotation, width } = getPhotoStyle(photo.id, index, isMobile);
   const hasLabel = photo.caption || photo.metadata?.location;
@@ -71,6 +73,23 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
             <rect width="100%" height="100%" filter="url(#shared-film)" />
           </svg>
         </div>
+
+        {/* Dev label overlay */}
+        {showLabels && (
+          <div style={{
+            position: "absolute", inset: 0, zIndex: 10,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 4,
+          }}>
+            <span style={{
+              fontFamily: "monospace", fontSize: "9px", color: "#fff",
+              wordBreak: "break-all", textAlign: "center", lineHeight: 1.4,
+            }}>
+              {photo.id}
+            </span>
+          </div>
+        )}
 
         {/* Caption / location */}
         {hasLabel && (
