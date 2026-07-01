@@ -62,7 +62,7 @@ export const siteData = {
     body: [
       "I'm a software engineer at PwC, working across Python services, React interfaces, Databricks pipelines, and AI-driven document processing. My work is primarily focused on full-stack delivery.",
       "I completed a 15-month placement at PwC as a degree apprentice, building Go backend services and React TypeScript interfaces, covering the full lifecycle from design through to deployment.",
-      "Outside of work I build open data tools. Two are publicly deployed, with one covering NI agricultural emissions, and the other mapping 35 years of river phosphorus data across 1,200 monitoring stations. Both involve real backend architecture, FastAPI, PostGIS, and Mapbox.",
+      "Outside of work I build open data tools. Two are publicly deployed, with one covering NI agricultural emissions, and the other mapping 35 years of river phosphorus data across 1,200 monitoring stations.",
     ],
     usageNotes: {
       Python: "Used professionally at PwC for data processing notebooks, PySpark optimisation, and API testing automation. Used in personal projects for ETL pipelines, Mann-Kendall trend analysis, and FastAPI backend services.",
