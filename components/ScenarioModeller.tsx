@@ -188,7 +188,7 @@ export function ScenarioModeller() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">Scenario modeller</p>
-          <h3 className="text-2xl text-ink sm:text-3xl">NI agriculture must cut 1,125 kt CO₂e to meet the 2030 Climate Act target.</h3>
+          <h3 className="pb-1 text-2xl text-ink sm:text-3xl">NI agriculture must cut 1,125 kt CO₂e to meet the 2030 Climate Act target.</h3>
           <p className="text-sm leading-7 text-muted">Adjust the interventions. Watch the trajectory change.</p>
         </div>
         <a

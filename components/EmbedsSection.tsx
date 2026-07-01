@@ -11,7 +11,7 @@ export function EmbedsSection() {
     <MotionSection id="embeds" className="space-y-6" delay={0.22}>
       <div className="max-w-3xl space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ocean">Interactive embeds</p>
-        <h2 className="text-3xl text-ink sm:text-4xl">Interact with some of my deployed projects.</h2>
+        <h2 className="pb-1 text-3xl text-ink sm:text-4xl">Interact with some of my deployed projects.</h2>
       </div>
 
       <div className="flex flex-col gap-6">

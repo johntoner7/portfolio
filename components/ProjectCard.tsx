@@ -17,7 +17,7 @@ export function ProjectCard({ project }: { project: Project }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-env">{project.slug.replace(/-/g, " ")}</p>
-          <h3 className="mt-3 text-2xl text-ink sm:text-3xl">{project.title}</h3>
+          <h3 className="mt-3 pb-1 text-2xl text-ink sm:text-3xl">{project.title}</h3>
         </div>
       </div>
 

@@ -8,7 +8,7 @@ export function Projects() {
     <MotionSection id="projects" className="space-y-6" delay={0.16}>
       <div className="max-w-3xl space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ocean">Projects</p>
-        <h2 className="text-3xl text-ink sm:text-4xl">Live tools I have built.</h2>
+        <h2 className="pb-1 text-3xl text-ink sm:text-4xl">Live tools I have built.</h2>
       </div>
 
       <div className="flex flex-col gap-6">

@@ -479,7 +479,7 @@ export function PhosphorusMapEmbed() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">Phosphorus map</p>
-          <h3 className="text-2xl text-ink sm:text-3xl">View river phosphorus data and farm census areas.</h3>
+          <h3 className="pb-1 text-2xl text-ink sm:text-3xl">View river phosphorus data and farm census areas.</h3>
           <p className="text-sm leading-7 text-muted">
             A simplified version of the river project. Click a station to load its trend history and sparkline.
           </p>
