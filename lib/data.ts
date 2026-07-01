@@ -91,8 +91,8 @@ export const siteData = {
         items: ["React", "Next.js", "FastAPI", "Tailwind", "Node.js"],
       },
       {
-        title: "Tools",
-        items: ["PostGIS", "Mapbox", "PySpark", "Databricks", "Azure DevOps"],
+        title: "Infrastructure & Tools",
+        items: ["PostGIS", "Mapbox", "PySpark", "Databricks", "Azure DevOps", "AWS"],
       },
     ] satisfies SkillGroup[],
   },
