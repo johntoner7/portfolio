@@ -18,7 +18,7 @@ export function App() {
   }, [hash]);
 
   return (
-    <div style={{
+    <div className="home-bg" style={{
       minHeight: "100vh",
       background: "linear-gradient(180deg, rgba(255,255,255,0.28), transparent 20%), linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 96%, black 4%) 42%, color-mix(in srgb, var(--background) 92%, black 8%) 100%)",
     }}>
