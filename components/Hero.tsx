@@ -9,7 +9,7 @@ export function Hero() {
       <div className="space-y-6">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-ocean">{siteData.hero.eyebrow}</p>
         <div className="space-y-4">
-          <h1 className="max-w-3xl text-5xl leading-[0.95] sm:text-6xl lg:text-7xl xl:text-8xl bg-gradient-to-r from-ocean via-sky-400 to-env bg-clip-text text-transparent">
+          <h1 className="max-w-3xl text-5xl leading-[0.95] text-ocean sm:text-6xl lg:text-7xl xl:text-8xl">
             {siteData.hero.title}
           </h1>
           <p className="max-w-2xl text-lg leading-8 text-muted sm:text-xl">{siteData.hero.copy}</p>
@@ -32,7 +32,7 @@ export function Hero() {
         </div>
       </div>
 
-      <aside className="rounded-2xl border border-divider bg-page/60 p-6">
+      <aside className="rounded-lg border border-divider bg-page/60 p-6">
         <div className="flex items-center justify-between gap-4 border-b border-divider pb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">{siteData.hero.focus.title}</p>
         </div>

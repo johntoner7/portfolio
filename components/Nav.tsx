@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Moon, SunMedium, Menu, X } from "lucide-react";
 import { siteData } from "@/lib/data";
 
@@ -9,6 +10,9 @@ export function Nav() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+
+  const resolveHref = (href: string) => (href.startsWith("#") && pathname !== "/" ? `/${href}` : href);
 
   useEffect(() => {
     const updateScrolledState = () => setIsScrolled(window.scrollY > 8);
@@ -58,7 +62,7 @@ export function Nav() {
         <div className="hidden sm:flex items-center gap-4">
           <nav aria-label="Primary" className="flex items-center gap-4 text-xs text-muted sm:gap-6 sm:text-sm">
             {siteData.nav.links.map((link) => (
-              <a key={link.href} href={link.href} className="hover:text-ink">
+              <a key={link.href} href={resolveHref(link.href)} className="hover:text-ink">
                 {link.label}
               </a>
             ))}
@@ -102,7 +106,7 @@ export function Nav() {
             {siteData.nav.links.map((link) => (
               <a
                 key={link.href}
-                href={link.href}
+                href={resolveHref(link.href)}
                 onClick={() => setMenuOpen(false)}
                 className="py-2.5 text-sm text-muted hover:text-ink transition-colors"
               >

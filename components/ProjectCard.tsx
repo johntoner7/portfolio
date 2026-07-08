@@ -6,7 +6,7 @@ import type { Project } from "@/lib/data";
 export function ProjectCard({ project }: { project: Project }) {
   return (
     <motion.article
-      className="group relative w-full overflow-hidden rounded-3xl border border-divider bg-page/60 p-6 transition-colors duration-300 hover:border-ocean/50 sm:p-7"
+      className="group relative w-full overflow-hidden rounded-lg border border-divider bg-page/60 p-6 transition-colors duration-300 hover:border-ocean/50 sm:p-7"
       whileHover={{ scale: 1.02 }}
       transition={{ type: "spring", stiffness: 280, damping: 24 }}
     >

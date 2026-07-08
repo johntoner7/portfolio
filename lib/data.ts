@@ -46,7 +46,7 @@ export const siteData = {
   hero: {
     eyebrow: "Portfolio",
     title: "John Toner",
-    copy: "Associate Software Engineer at PwC. I build full-stack applications to automate workflows and turn complex data into usable products.",
+    copy: "Senior Associate Software Engineer at PwC. I build full-stack applications to automate workflows and turn complex data into usable products.",
     primaryCta: { label: "View Projects", href: "#projects" },
     secondaryCta: { label: "Get in Touch", href: "#contact" },
     focus: {

@@ -26,7 +26,7 @@ export function About() {
 
         <div className="grid gap-4">
           {siteData.about.skills.map((group) => (
-            <div key={group.title} className="rounded-2xl border border-divider bg-page/60 p-5">
+            <div key={group.title} className="rounded-lg border border-divider bg-page/60 p-5">
               <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink">{group.title}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {group.items.map((item) => (
@@ -47,7 +47,7 @@ export function About() {
                 ))}
               </div>
               {selectedItem?.group === group.title && selectedNote && (
-                <div className="mt-4 rounded-2xl border border-divider bg-surface px-4 py-3 text-sm leading-6 text-muted shadow-glow">
+                <div className="mt-4 rounded-lg border border-divider bg-surface px-4 py-3 text-sm leading-6 text-muted shadow-glow">
                   <div className="text-xs font-semibold uppercase tracking-[0.24em] text-ocean">{selectedItem.item}</div>
                   <p className="mt-2 text-ink">{selectedNote}</p>
                 </div>
