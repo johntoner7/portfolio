@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 
 import { App } from "./App";
 import { Photos } from "@/pages/Photos";
@@ -26,6 +27,7 @@ ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <BrowserRouter>
       <AppRoutes />
+      <Analytics />
     </BrowserRouter>
   </React.StrictMode>,
 );
