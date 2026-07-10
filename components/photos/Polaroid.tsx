@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import type { Photo } from "@/hooks/usePhotos";
 import { getCloudinaryUrl } from "@/utils/cloudinary";
@@ -16,6 +17,7 @@ const showLabels = typeof window !== "undefined" && new URLSearchParams(window.l
 export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidProps) {
   const { x, yNudge, rotation, width } = getPhotoStyle(photo.id, index, isMobile);
   const hasLabel = photo.caption || photo.metadata?.location;
+  const [loaded, setLoaded] = useState(false);
 
   return (
     <motion.div
@@ -62,7 +64,15 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
             alt={photo.caption || photo.group}
             loading={index < 2 ? "eager" : "lazy"}
             fetchPriority={index < 2 ? "high" : "auto"}
-            style={{ display: "block", width: "100%", height: "auto" }}
+            decoding="async"
+            onLoad={() => setLoaded(true)}
+            style={{
+              display: "block",
+              width: "100%",
+              height: "auto",
+              opacity: loaded ? 1 : 0,
+              transition: "opacity 0.35s ease",
+            }}
           />
           {/* Film vignette */}
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)", pointerEvents: "none" }} />
