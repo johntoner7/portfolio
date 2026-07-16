@@ -18,6 +18,7 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
   const { x, yNudge, rotation, width } = getPhotoStyle(photo.id, index, isMobile);
   const hasLabel = photo.caption || photo.metadata?.location;
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
 
   return (
     <motion.div
@@ -58,30 +59,58 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
         </svg>
 
         {/* Photo image */}
-        <div style={{ position: "relative", overflow: "hidden", borderRadius: 1 }}>
-          <img
-            src={getCloudinaryUrl(photo.cloudinaryId, isMobile ? 380 : 600)}
-            alt={photo.caption || photo.group}
-            loading={index < 2 ? "eager" : "lazy"}
-            fetchPriority={index < 2 ? "high" : "auto"}
-            decoding="async"
-            onLoad={() => setLoaded(true)}
-            style={{
-              display: "block",
+        <div style={{ position: "relative", overflow: "hidden", borderRadius: 1, background: "#f5f5f5", aspectRatio: "4/3" }}>
+          {!error ? (
+            <img
+              src={getCloudinaryUrl(photo.cloudinaryId, isMobile ? 380 : 600)}
+              alt={photo.caption || photo.group}
+              loading={index < 2 ? "eager" : "lazy"}
+              fetchPriority={index < 2 ? "high" : "auto"}
+              decoding="async"
+              onLoad={() => setLoaded(true)}
+              onError={() => setError(true)}
+              style={{
+                display: "block",
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: loaded ? 1 : 0,
+                transition: "opacity 0.35s ease",
+              }}
+            />
+          ) : (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               width: "100%",
-              height: "auto",
-              opacity: loaded ? 1 : 0,
-              transition: "opacity 0.35s ease",
-            }}
-          />
-          {/* Film vignette */}
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)", pointerEvents: "none" }} />
-          {/* Warm cast */}
-          <div style={{ position: "absolute", inset: 0, background: "rgba(160,100,30,0.06)", pointerEvents: "none", mixBlendMode: "multiply" }} />
-          {/* Film grain */}
-          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.18, mixBlendMode: "overlay" }} xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" filter="url(#shared-film)" />
-          </svg>
+              height: "100%",
+              padding: "16px",
+              textAlign: "center",
+            }}>
+              <p style={{
+                fontFamily: "'Lora', Georgia, serif",
+                fontSize: "10px",
+                color: "#999",
+                lineHeight: 1.5,
+                margin: 0,
+              }}>
+                There's supposed to be a photo here but it's not rendering right now. Hopefully it's an issue with your connection, I'm sure my code is perfect :)
+              </p>
+            </div>
+          )}
+          {!error && (
+            <>
+              {/* Film vignette */}
+              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)", pointerEvents: "none" }} />
+              {/* Warm cast */}
+              <div style={{ position: "absolute", inset: 0, background: "rgba(160,100,30,0.06)", pointerEvents: "none", mixBlendMode: "multiply" }} />
+              {/* Film grain */}
+              <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.18, mixBlendMode: "overlay" }} xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" filter="url(#shared-film)" />
+              </svg>
+            </>
+          )}
         </div>
 
         {/* Dev label overlay */}
