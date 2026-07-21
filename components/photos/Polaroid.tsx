@@ -59,7 +59,7 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
         </svg>
 
         {/* Photo image */}
-        <div style={{ position: "relative", overflow: "hidden", borderRadius: 1, background: "#f5f5f5", aspectRatio: "4/3" }}>
+        <div style={{ position: "relative", overflow: "hidden", borderRadius: 1, background: "#f5f5f5" }}>
           {!error ? (
             <img
               src={getCloudinaryUrl(photo.cloudinaryId, isMobile ? 380 : 600)}
@@ -72,8 +72,7 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
               style={{
                 display: "block",
                 width: "100%",
-                height: "100%",
-                objectFit: "cover",
+                height: "auto",
                 opacity: loaded ? 1 : 0,
                 transition: "opacity 0.35s ease",
               }}
@@ -84,7 +83,7 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
               alignItems: "center",
               justifyContent: "center",
               width: "100%",
-              height: "100%",
+              minHeight: "200px",
               padding: "16px",
               textAlign: "center",
             }}>
