@@ -698,5 +698,19 @@
       "tags": [],
       "timeTaken": "12:26:21"
     }
+  },
+  {
+    "id": "103",
+    "cloudinaryId": "travel/img-5747",
+    "year": 2026,
+    "group": "Fleadh Cheoil na hÉireann 2026",
+    "caption": "",
+    "metadata": {
+      "dateTaken": "2026-08-05",
+      "timeTaken": "20:00:42",
+      "location": "Belfast, Ireland",
+      "camera": "iPhone 15",
+      "tags": []
+    }
   }
 ]
