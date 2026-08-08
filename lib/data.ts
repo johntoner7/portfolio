@@ -69,12 +69,15 @@ export const siteData = {
       TypeScript: "Primary language across personal projects: the emissions tool, phosphorus pipeline frontend, and client-facing tutoring site. Also used for internal interfaces at PwC.",
       Go: "Used for backend services across a 15-month placement, building and maintaining production APIs.",
       Java: "Primary language throughout university, used across coursework, group projects, and individual assignments over three years.",
+      Kotlin: "Used to build the Unmarked backend, a Spring Boot REST API serving player, match, and stadium data for 70 footballers from PostgreSQL.",
       SQL: "Used for analytics queries and reporting at PwC, and for spatial joins and trend queries via PostGIS in the phosphorus pipeline.",
       React: "Used in all personal projects including a scrollytelling emissions tool, an interactive geospatial monitoring dashboard, and a client tutoring site. Also used for internal tooling at PwC.",
       "Next.js": "Used to build the NI agricultural emissions tool with App Router, TypeScript, Tailwind CSS, and Recharts, deployed on Vercel.",
       FastAPI: "Used to build the phosphorus pipeline API, serving 35 years of monitoring data across 1,201 stations with PostGIS spatial queries and Prefect-orchestrated ETL. Deployed on Railway.",
       Tailwind: "Used across the emissions tool, phosphorus pipeline frontend, portfolio site, and a client-facing tutoring website.",
       "Node.js": "used as the runtime for a backend service in my dissertation project.",
+      "Spring Boot": "Used to build the Unmarked REST API in Kotlin, with JPA repositories over PostgreSQL and Flyway-managed schema migrations, containerised with Docker.",
+      PostgreSQL: "Used as the primary datastore for two personal projects: Unmarked, where a Python pipeline ingests scraped match data consumed by a Kotlin API, and the phosphorus pipeline, where the PostGIS extension backs spatial queries over NI river data.",
       PostGIS: "Used to store and query spatial monitoring data in the phosphorus pipeline, covering spatial joins, station lookups, and trend aggregations across NI river network data.",
       Mapbox: "Used to build an interactive geospatial interface for the phosphorus pipeline, rendering 1,201 monitoring stations, river network lines, and farm census polygons with custom styling and filtering.",
       PySpark: "Used at PwC to optimise a Canada Life capital projections notebook, reducing a multi-minute processing job to seconds through partition tuning and broadcast joins.",
@@ -84,15 +87,15 @@ export const siteData = {
     skills: [
       {
         title: "Languages",
-        items: ["Python", "TypeScript", "Go", "Java", "SQL"],
+        items: ["Python", "TypeScript", "Go", "Java", "Kotlin", "SQL"],
       },
       {
         title: "Frameworks",
-        items: ["React", "Next.js", "FastAPI", "Tailwind", "Node.js"],
+        items: ["React", "Next.js", "FastAPI", "Spring Boot", "Tailwind", "Node.js"],
       },
       {
         title: "Infrastructure & Tools",
-        items: ["PostGIS", "Mapbox", "PySpark", "Databricks", "Azure DevOps", "AWS"],
+        items: ["PostgreSQL", "PostGIS", "Mapbox", "PySpark", "Databricks", "Azure DevOps", "AWS"],
       },
     ] satisfies SkillGroup[],
   },
@@ -118,6 +121,18 @@ export const siteData = {
       stack: ["Python", "FastAPI", "PostGIS", "Mapbox GL JS", "Railway"],
       links: [
         { label: "Live site", href: "https://rivers.climategapni.com" },
+        { label: "GitHub", href: "https://github.com/johntoner7" },
+      ],
+    },
+    {
+      title: "Unmarked",
+      slug: "unmarked-goals-map",
+      hook: "Every stadium where a footballer has scored, mapped.",
+      description:
+        "Kotlin and Spring Boot REST API over PostgreSQL, with a Next.js frontend rendering per-player maps in Mapbox GL JS. A Python pipeline scrapes, geocodes and ingests match data for 70 players, giving per-stadium breakdowns of appearances, goals and assists alongside guess-the-player and daily challenge modes.",
+      stack: ["Kotlin", "Spring Boot", "Next.js", "Mapbox GL JS", "PostgreSQL", "Python"],
+      links: [
+        { label: "Live site", href: "https://unmarked.johntoner.com" },
         { label: "GitHub", href: "https://github.com/johntoner7" },
       ],
     },
