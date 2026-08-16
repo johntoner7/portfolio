@@ -53,7 +53,7 @@ export const siteData = {
       title: "Current focus",
       body: [
         "Building agentic capabilities for document processing systems using Python.",
-        "Personally focused on creating open environmental data tools and visualisations.",
+        "Personally focused on creating environmental data tools and visualisations.",
       ],
     },
   },
