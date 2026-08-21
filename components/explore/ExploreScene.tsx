@@ -321,7 +321,7 @@ function ClickHint({ accent, theme }: { accent: string; theme: ThemeName }) {
             backdropFilter: "blur(4px)",
           }}
         >
-          <ArrowDown style={{ height: 9, width: 9 }} color={accent} />
+          <ArrowDown style={{ height: 9, width: 9, position: "relative", top: 1 }} color={accent} />
         </div>
       </Html>
     </group>
