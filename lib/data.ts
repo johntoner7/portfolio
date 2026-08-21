@@ -41,6 +41,7 @@ export const siteData = {
       { label: "Projects", href: "#projects" },
       { label: "Contact", href: "#contact" },
       { label: "Photos", href: "/photos" },
+      { label: "Explore", href: "/explore" },
     ] satisfies NavLink[],
   },
   hero: {

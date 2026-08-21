@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 
 import { App } from "./App";
 import { Photos } from "@/pages/Photos";
+import { Explore } from "@/pages/Explore";
 
 import "./index.css";
 
@@ -15,6 +16,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/photos" element={<Photos />} />
+        <Route path="/explore" element={<Explore />} />
       </Routes>
     </div>
   );

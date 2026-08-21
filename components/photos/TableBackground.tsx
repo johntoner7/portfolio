@@ -50,12 +50,12 @@ export function TableBackground() {
       </svg>
 
       {/* Top fade */}
-      <div style={{ ...fullFixed, bottom: "auto", height: 120, zIndex: 4,
+      <div style={{ ...fullFixed, bottom: "auto", height: 120, zIndex: 4, opacity: 0.55,
         background: "linear-gradient(to bottom, var(--background) 0%, transparent 100%)" }}
       />
 
       {/* Bottom fade */}
-      <div style={{ ...fullFixed, top: "auto", height: 100, zIndex: 4,
+      <div style={{ ...fullFixed, top: "auto", height: 100, zIndex: 4, opacity: 0.55,
         background: "linear-gradient(to top, var(--background) 0%, transparent 100%)" }}
       />
 
