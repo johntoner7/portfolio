@@ -247,7 +247,6 @@ function Label({ text, y, accent, theme }: { text: string; y: number; accent: st
   const anchor = useRef<THREE.Group>(null);
   const world = useMemo(() => new THREE.Vector3(), []);
   const t = themes[theme];
-  const quality = useContext(QualityCtx);
 
   useFrame(({ camera }) => {
     if (!el.current || !anchor.current) return;
@@ -266,7 +265,10 @@ function Label({ text, y, accent, theme }: { text: string; y: number; accent: st
             transition: "opacity 120ms linear",
             whiteSpace: "nowrap",
             fontFamily: "var(--font-dm-sans), sans-serif",
-            fontSize: quality === "mobile" ? 15 : 12,
+            // one size for both: Html scales with distance, so a bigger font on
+            // mobile does not aid legibility, it just makes the label loom
+            // larger against the object it belongs to
+            fontSize: 12,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
             color: t.labelInk,
@@ -304,24 +306,32 @@ function ClickHint({ accent, theme }: { accent: string; theme: ThemeName }) {
 
   return (
     <group ref={anchor} position={[0, 0.05, 0]}>
-      <Html center distanceFactor={7} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
+      {/*
+        Built at twice the size and scaled down half as hard, which comes to the
+        same size in the room but is drawn from twice as many pixels. drei
+        applies distanceFactor as a fractional CSS scale(), and at 16px the
+        arrow was landing between device pixels — which is what read as
+        off-centre. The glyph itself is dead centre in its own viewBox.
+      */}
+      <Html center distanceFactor={3.5} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
         <div
           ref={el}
           style={{
             opacity: 0,
             transition: "opacity 120ms linear",
+            boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 16,
-            height: 16,
+            width: 32,
+            height: 32,
             borderRadius: "50%",
             background: t.labelBg,
-            border: `1px solid ${accent}`,
+            border: `2px solid ${accent}`,
             backdropFilter: "blur(4px)",
           }}
         >
-          <ArrowDown style={{ height: 9, width: 9, position: "relative", top: 1 }} color={accent} />
+          <ArrowDown style={{ height: 18, width: 18, display: "block" }} color={accent} />
         </div>
       </Html>
     </group>
