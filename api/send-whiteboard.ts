@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Resend } from "resend";
-import { siteData } from "../lib/data";
+// Extension is required and deliberate: the repo is "type": "module", so the
+// compiled function is ESM, and ESM does not resolve extensionless relative
+// specifiers. TypeScript maps the .js back to lib/data.ts. Without it the
+// function loads and then dies on ERR_MODULE_NOT_FOUND at runtime only.
+import { siteData } from "../lib/data.js";
 
 const PREFIX = "data:image/png;base64,";
 /** Well over a full-board drawing, well under the function's body limit. */

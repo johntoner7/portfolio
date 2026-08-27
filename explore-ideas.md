@@ -202,6 +202,30 @@ Captured 2026-08-21. Not yet implemented — just tracking so nothing gets lost.
       lights go on, the lighting does that, and the material already
       responds to it — so the texture is built once and drawings survive.
 
+- [x] **Mobile pass on the whiteboard + drag-to-look text selection**
+      - Dragging a finger to look around was starting a text selection and
+        popping the callout menu. `user-select: none` on the room container
+        and the canvas, plus `-webkit-touch-callout: none`; the text fields
+        opt back in with `user-select: text`, since a container-level `none`
+        stops you selecting inside an input on some browsers.
+      - The send form was absolutely positioned at a fixed `bottom: 150px`,
+        measured against the desktop toolbar. On a phone the rails wrap to
+        more rows and it overlapped them. Everything is now one flow column
+        (send form, note editor, tools, actions), so a wrapping row pushes
+        the rest up instead.
+      - The on-screen keyboard does not move a fixed container, so the note
+        field opened underneath it. The toolbar now lifts by the height
+        `visualViewport` reports as covered; without that API the inset
+        stays 0 and nothing changes.
+      - Touch targets go to 44px on mobile (chips, colour dots, buttons),
+        and action labels drop to icons so the row stays on one line.
+      - A tool group the current mode can't use is dropped on mobile rather
+        than dimmed — the rail is the scarcest space on a phone. Desktop
+        keeps it dimmed, where a steady width is worth more than the room.
+      Board framing was checked and left alone: at the portrait clamp of
+      3.1m the board already fills the screen width almost exactly, and it
+      sits well above where the toolbar starts.
+
 ## Notes
 
 - Keep using the "measure real bounds before placing" workflow for any new

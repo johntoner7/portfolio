@@ -85,11 +85,12 @@ const compactButton: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const toolChip = (active: boolean): React.CSSProperties => ({
+const toolChip = (active: boolean, touch = false): React.CSSProperties => ({
   display: "inline-grid",
   placeItems: "center",
-  height: 34,
-  width: 34,
+  // 44px is the thumb-sized target the rest of the room's controls use
+  height: touch ? 44 : 34,
+  width: touch ? 44 : 34,
   touchAction: "manipulation",
   borderRadius: 999,
   cursor: "pointer",
@@ -109,6 +110,9 @@ const sendField: React.CSSProperties = {
   fontFamily: "inherit",
   width: "100%",
   boxSizing: "border-box",
+  // the container turns selection off wholesale; typed text needs it back
+  userSelect: "text",
+  WebkitUserSelect: "text",
 };
 
 export function Explore() {
@@ -169,6 +173,29 @@ export function Explore() {
   // null when no sticky note is selected; otherwise that note's text
   const [noteDraft, setNoteDraft] = useState<string | null>(null);
   const noteField = useRef<HTMLTextAreaElement>(null);
+  // how much of the viewport the on-screen keyboard is covering
+  const [keyboardInset, setKeyboardInset] = useState(0);
+
+  /*
+   * The toolbar is pinned to the bottom of a fixed container, which the
+   * on-screen keyboard does not move — so on a phone the note field would
+   * open underneath it. visualViewport is the only thing that reports the
+   * covered height; without it (older browsers) the inset stays 0 and the
+   * toolbar sits where it always did.
+   */
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const measure = () =>
+      setKeyboardInset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+    measure();
+    viewport.addEventListener("resize", measure);
+    viewport.addEventListener("scroll", measure);
+    return () => {
+      viewport.removeEventListener("resize", measure);
+      viewport.removeEventListener("scroll", measure);
+    };
+  }, []);
   // Send opens a small form first, so the drawing only ever leaves the
   // browser on a second, deliberate press.
   const [sendOpen, setSendOpen] = useState(false);
@@ -363,6 +390,18 @@ export function Explore() {
     };
   }, []);
 
+  // thumb-sized controls and the fields' own selection rules, both of which
+  // only matter once the whiteboard toolbar is on screen
+  const actionStyle: React.CSSProperties = {
+    ...compactButton,
+    height: isMobile ? 44 : 36,
+    padding: isMobile ? "0 12px" : "0 12px",
+  };
+  const fieldStyle: React.CSSProperties = { ...sendField, height: isMobile ? 44 : 38 };
+  /** which tool groups the current mode can actually use */
+  const showColours = tool.mode !== "eraser";
+  const showNibs = tool.mode !== "note";
+
   const overlaysHidden = photosOpen || drawingOpen;
   const overlayHits: React.CSSProperties["pointerEvents"] = overlaysHidden ? "none" : "auto";
 
@@ -380,6 +419,11 @@ export function Explore() {
         background: "var(--background)",
         overflow: "hidden",
         overscrollBehavior: "none",
+        // the room is a scene to drag around, not a document to select;
+        // the text fields opt back in individually
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
       }}
     >
       <Suspense
@@ -553,22 +597,90 @@ export function Explore() {
         />
       </button>
 
-      {/* Whiteboard toolbar — only while docked at the board */}
+      {/*
+        Whiteboard toolbar — only while docked. Everything stacks in one
+        flow column (send form, note editor, tools, actions) so a row that
+        wraps on a narrow phone pushes the rest up instead of overlapping
+        it, which a fixed offset could not do.
+      */}
       <div
         style={{
           position: "absolute",
-          bottom: drawingOpen ? "calc(20px + env(safe-area-inset-bottom))" : "-260px",
+          bottom: drawingOpen
+            ? `calc(16px + env(safe-area-inset-bottom) + ${keyboardInset}px)`
+            : "-420px",
           left: "50%",
           transform: "translateX(-50%)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           gap: 8,
-          width: "calc(100vw - 24px)",
+          width: "calc(100vw - 20px)",
           maxWidth: 620,
           transition: "bottom 320ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
+        {/* Send form: the second, deliberate press that actually sends */}
+        {sendOpen && (
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 380,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              padding: 14,
+              borderRadius: 16,
+              border: "1px solid rgb(var(--color-divider))",
+              background: "rgb(var(--color-surface) / 0.94)",
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 12, color: "rgb(var(--color-muted))", lineHeight: 1.5 }}>
+              This emails the board to John as a PNG. Both fields are optional.
+            </p>
+            <input
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              placeholder="Your name"
+              maxLength={80}
+              style={fieldStyle}
+            />
+            <textarea
+              value={senderNote}
+              onChange={(e) => setSenderNote(e.target.value)}
+              placeholder="A note to go with it"
+              maxLength={600}
+              rows={3}
+              style={{ ...fieldStyle, resize: "vertical", paddingTop: 10, height: "auto" }}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => setSendOpen(false)} style={actionStyle}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={sendDrawing}
+                disabled={sendStatus === "sending"}
+                style={{
+                  ...actionStyle,
+                  background: "rgb(var(--color-ink))",
+                  color: "rgb(var(--color-surface))",
+                  borderColor: "rgb(var(--color-ink))",
+                }}
+              >
+                {sendStatus === "sending" ? "Sending…" : "Send it"}
+              </button>
+            </div>
+            {sendStatus === "error" && (
+              <p style={{ margin: 0, fontSize: 12, color: "rgb(var(--color-clay))" }}>
+                That didn't send. Have another go in a moment.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Note editor — appears against the note you just tapped */}
         {noteDraft !== null && (
           <div
@@ -593,7 +705,7 @@ export function Explore() {
               rows={2}
               aria-label="Sticky note text"
               style={{
-                ...sendField,
+                ...fieldStyle,
                 height: "auto",
                 paddingTop: 8,
                 paddingBottom: 8,
@@ -608,7 +720,7 @@ export function Explore() {
                 deleteNote.current?.();
                 setNoteDraft(null);
               }}
-              style={{ ...compactButton, flexShrink: 0, padding: "0 10px" }}
+              style={{ ...actionStyle, flexShrink: 0, padding: "0 10px" }}
             >
               <Trash2 style={{ height: 15, width: 15 }} />
             </button>
@@ -618,7 +730,7 @@ export function Explore() {
                 deselectNote.current?.();
                 setNoteDraft(null);
               }}
-              style={{ ...compactButton, flexShrink: 0 }}
+              style={{ ...actionStyle, flexShrink: 0 }}
             >
               Done
             </button>
@@ -638,97 +750,113 @@ export function Explore() {
               aria-label={label}
               aria-pressed={tool.mode === mode}
               onClick={() => pickTool({ mode: mode as BoardMode })}
-              style={toolChip(tool.mode === mode)}
+              style={toolChip(tool.mode === mode, isMobile)}
             >
               <Icon style={{ height: 16, width: 16 }} />
             </button>
           ))}
 
-          <span style={railDivider} />
+          {/*
+            On a phone the rail is the scarcest space in the room, so a group
+            the current tool cannot use is dropped rather than dimmed. On
+            desktop it stays dimmed, where holding the width steady is worth
+            more than the room it costs.
+          */}
+          {(showColours || !isMobile) && (
+            <>
+              <span style={railDivider} />
+              {(tool.mode === "note" ? BOARD_NOTE_COLOURS : BOARD_INKS).map((colour) => {
+                const active =
+                  tool.mode === "note" ? tool.noteColour === colour : tool.colour === colour;
+                return (
+                  <button
+                    key={colour}
+                    type="button"
+                    aria-label={`Colour ${colour}`}
+                    aria-pressed={active}
+                    onClick={() =>
+                      pickTool(tool.mode === "note" ? { noteColour: colour } : { colour })
+                    }
+                    style={{
+                      // a thumb needs more than the swatch itself, so the
+                      // button is padded out around a smaller dot
+                      height: isMobile ? 40 : 26,
+                      width: isMobile ? 40 : 26,
+                      padding: 0,
+                      borderRadius: 999,
+                      background: colour,
+                      cursor: "pointer",
+                      opacity: showColours ? 1 : 0.35,
+                      border: active
+                        ? "2px solid rgb(var(--color-ink))"
+                        : "1px solid rgb(var(--color-divider))",
+                      boxShadow: active ? "0 0 0 3px rgb(var(--color-ink) / 0.12)" : "none",
+                    }}
+                  />
+                );
+              })}
+            </>
+          )}
 
-          {(tool.mode === "note" ? BOARD_NOTE_COLOURS : BOARD_INKS).map((colour) => {
-            const active =
-              tool.mode === "note" ? tool.noteColour === colour : tool.colour === colour;
-            return (
-              <button
-                key={colour}
-                type="button"
-                aria-label={`Colour ${colour}`}
-                aria-pressed={active}
-                onClick={() =>
-                  pickTool(tool.mode === "note" ? { noteColour: colour } : { colour })
-                }
-                style={{
-                  height: 26,
-                  width: 26,
-                  borderRadius: 999,
-                  background: colour,
-                  cursor: "pointer",
-                  // the eraser doesn't use a colour, so dim the row rather
-                  // than hide it and make the rail jump width
-                  opacity: tool.mode === "eraser" ? 0.35 : 1,
-                  border: active
-                    ? "2px solid rgb(var(--color-ink))"
-                    : "1px solid rgb(var(--color-divider))",
-                  boxShadow: active ? "0 0 0 3px rgb(var(--color-ink) / 0.12)" : "none",
-                }}
-              />
-            );
-          })}
-
-          <span style={railDivider} />
-
-          {BOARD_NIBS.map((width) => (
-            <button
-              key={width}
-              type="button"
-              aria-label={`Nib ${width}`}
-              aria-pressed={tool.width === width}
-              onClick={() => pickTool({ width })}
-              disabled={tool.mode === "note"}
-              style={{
-                ...toolChip(tool.width === width),
-                opacity: tool.mode === "note" ? 0.35 : 1,
-              }}
-            >
-              <span
-                style={{
-                  display: "block",
-                  borderRadius: 999,
-                  background: "rgb(var(--color-ink))",
-                  // the swatch reads as the nib it selects, scaled to fit
-                  height: Math.max(3, width * 0.55),
-                  width: Math.max(3, width * 0.55),
-                }}
-              />
-            </button>
-          ))}
+          {(showNibs || !isMobile) && (
+            <>
+              <span style={railDivider} />
+              {BOARD_NIBS.map((width) => (
+                <button
+                  key={width}
+                  type="button"
+                  aria-label={`Nib ${width}`}
+                  aria-pressed={tool.width === width}
+                  onClick={() => pickTool({ width })}
+                  disabled={!showNibs}
+                  style={{
+                    ...toolChip(tool.width === width, isMobile),
+                    opacity: showNibs ? 1 : 0.35,
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "block",
+                      borderRadius: 999,
+                      background: "rgb(var(--color-ink))",
+                      // the swatch reads as the nib it selects, scaled to fit
+                      height: Math.max(3, width * 0.55),
+                      width: Math.max(3, width * 0.55),
+                    }}
+                  />
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
-        {/* Actions */}
+        {/* Actions. Labels drop to icons on a phone so the row stays on one line. */}
         <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
           <button
             type="button"
+            aria-label="Clear the board"
             onClick={() => {
               clearBoard.current?.();
               setNoteDraft(null);
             }}
-            style={compactButton}
+            style={actionStyle}
           >
             <Trash2 style={{ height: 15, width: 15 }} />
-            Clear
+            {!isMobile && "Clear"}
           </button>
           <button
             type="button"
+            aria-label="Download the drawing"
             onClick={downloadDrawing}
             disabled={!hasDrawing}
-            style={{ ...compactButton, opacity: hasDrawing ? 1 : 0.45 }}
+            style={{ ...actionStyle, opacity: hasDrawing ? 1 : 0.45 }}
           >
             <Download style={{ height: 15, width: 15 }} />
-            Download
+            {!isMobile && "Download"}
           </button>
           <button
             type="button"
+            aria-label="Send the drawing to John"
             onClick={() => {
               // the note editor and the send form share the same space
               deselectNote.current?.();
@@ -737,85 +865,20 @@ export function Explore() {
             }}
             disabled={!hasDrawing}
             style={{
-              ...compactButton,
+              ...actionStyle,
               opacity: hasDrawing ? 1 : 0.45,
               borderColor:
                 sendStatus === "error" ? "rgb(var(--color-clay))" : "rgb(var(--color-divider))",
             }}
           >
             <Send style={{ height: 15, width: 15 }} />
-            {sendStatus === "sent" ? "Sent — thank you" : "Send to John"}
+            {sendStatus === "sent" ? "Sent — thank you" : isMobile ? "" : "Send to John"}
           </button>
-          <button type="button" onClick={leaveDrawing} style={compactButton}>
+          <button type="button" onClick={leaveDrawing} style={actionStyle}>
             Done
           </button>
         </div>
       </div>
-
-      {/* Send form: the second, deliberate press that actually sends */}
-      {drawingOpen && sendOpen && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "calc(150px + env(safe-area-inset-bottom))",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "calc(100vw - 24px)",
-            maxWidth: 380,
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            padding: 14,
-            borderRadius: 16,
-            border: "1px solid rgb(var(--color-divider))",
-            background: "rgb(var(--color-surface) / 0.94)",
-            backdropFilter: "blur(10px)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-          }}
-        >
-          <p style={{ margin: 0, fontSize: 12, color: "rgb(var(--color-muted))", lineHeight: 1.5 }}>
-            This emails the board to John as a PNG. Both fields are optional.
-          </p>
-          <input
-            value={senderName}
-            onChange={(e) => setSenderName(e.target.value)}
-            placeholder="Your name"
-            maxLength={80}
-            style={sendField}
-          />
-          <textarea
-            value={senderNote}
-            onChange={(e) => setSenderNote(e.target.value)}
-            placeholder="A note to go with it"
-            maxLength={600}
-            rows={3}
-            style={{ ...sendField, resize: "vertical", paddingTop: 10, height: "auto" }}
-          />
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button type="button" onClick={() => setSendOpen(false)} style={compactButton}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={sendDrawing}
-              disabled={sendStatus === "sending"}
-              style={{
-                ...compactButton,
-                background: "rgb(var(--color-ink))",
-                color: "rgb(var(--color-surface))",
-                borderColor: "rgb(var(--color-ink))",
-              }}
-            >
-              {sendStatus === "sending" ? "Sending…" : "Send it"}
-            </button>
-          </div>
-          {sendStatus === "error" && (
-            <p style={{ margin: 0, fontSize: 12, color: "rgb(var(--color-clay))" }}>
-              That didn't send. Have another go in a moment.
-            </p>
-          )}
-        </div>
-      )}
 
       <ExplorePanel item={selected} onClose={() => setSelectedId(null)} />
       <ExploreCredits open={creditsOpen} onClose={() => setCreditsOpen(false)} />

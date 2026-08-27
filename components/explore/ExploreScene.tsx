@@ -2739,7 +2739,17 @@ export function ExploreScene({
             far: 120,
             position: [0, EYE_HEIGHT, START.y],
           }}
-          style={{ touchAction: "none", cursor: "grab" }}
+          style={{
+            touchAction: "none",
+            cursor: "grab",
+            // Dragging to look around is a drag, not a text gesture: without
+            // these, a finger swipe starts a selection and pops the callout
+            // menu over the room.
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
+            WebkitTapHighlightColor: "transparent",
+          }}
           onCreated={({ gl }) => {
             // phones drop the GL context when you switch apps; preventing the
             // default lets the browser restore it instead of leaving a blank canvas
