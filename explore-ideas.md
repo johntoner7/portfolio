@@ -222,9 +222,35 @@ Captured 2026-08-21. Not yet implemented — just tracking so nothing gets lost.
       - A tool group the current mode can't use is dropped on mobile rather
         than dimmed — the rail is the scarcest space on a phone. Desktop
         keeps it dimmed, where a steady width is worth more than the room.
-      Board framing was checked and left alone: at the portrait clamp of
-      3.1m the board already fills the screen width almost exactly, and it
-      sits well above where the toolbar starts.
+- [x] **Landscape framing + rotate prompt** — a 2.06 x 1.11 board is
+      width-bound in portrait, so it can only ever be ~25% of a tall screen.
+      Turned sideways it becomes height-bound and fills ~94% of the area
+      not covered by controls. So: nudge people to turn the phone, and make
+      turning it actually pay.
+      - `whiteboardViewpoint` now takes a `reserved` fraction — how much of
+        the viewport the toolbar covers — and frames the board inside what
+        is left rather than the whole screen. The camera is dropped below
+        the board's centre by half that band, which lifts the board clear
+        of the controls *without* tilting: a pitched camera would keystone
+        it, a lowered one keeps the plane parallel and the corners square.
+      - The pose is re-solved every frame while docked instead of being
+        held at whatever the docking shot left, so turning the phone
+        re-frames live. That is the whole point of the prompt.
+      - A rotate hint appears on a portrait touch device while docked,
+        dismissible. iOS Safari cannot be told to rotate, so it is a nudge;
+        drawing still works in portrait.
+      **Correction to an earlier note in this file:** landscape was never
+      76% — that figure assumed fov 72, but `useIsMobile` is a *width* test
+      (640px), so a phone on its side reads as desktop and gets fov 65. It
+      was actually ~85%, with the toolbar sitting on top of its bottom
+      fifth. It is now 76% of the full viewport but entirely clear of the
+      controls, which is the honest maximum while the controls exist.
+      Touch sizing and the toolbar layout no longer key off `useIsMobile`
+      for the same reason: sizing follows `(pointer: coarse)` and the
+      layout follows `(max-height: 539px)`, which is what actually catches
+      a phone on its side. Short viewports get one icon-only row (~14
+      controls, ~690px, fits an 844px landscape phone) rather than two
+      stacked rails, since every extra row comes straight off the board.
 
 ## Notes
 

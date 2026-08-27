@@ -2,15 +2,18 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
+  Check,
   ChevronUp,
   Compass,
   Download,
   Eraser,
   Info,
   Pencil,
+  RotateCw,
   Send,
   StickyNote,
   Trash2,
+  X,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useThemeMode } from "@/hooks/useThemeMode";
@@ -175,6 +178,47 @@ export function Explore() {
   const noteField = useRef<HTMLTextAreaElement>(null);
   // how much of the viewport the on-screen keyboard is covering
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const [isPortrait, setIsPortrait] = useState(false);
+  const [rotateHintDismissed, setRotateHintDismissed] = useState(false);
+  /*
+   * `useIsMobile` is a width test, so a phone turned sideways (844px) reads
+   * as desktop. Touch sizing has to follow the input device, and the toolbar
+   * layout has to follow the height that is actually left.
+   */
+  const [isTouch, setIsTouch] = useState(false);
+  const [isShort, setIsShort] = useState(false);
+
+  useEffect(() => {
+    const coarse = window.matchMedia("(pointer: coarse)");
+    const short = window.matchMedia("(max-height: 539px)");
+    const measure = () => {
+      setIsTouch(coarse.matches);
+      setIsShort(short.matches);
+    };
+    measure();
+    coarse.addEventListener("change", measure);
+    short.addEventListener("change", measure);
+    return () => {
+      coarse.removeEventListener("change", measure);
+      short.removeEventListener("change", measure);
+    };
+  }, []);
+
+  /*
+   * A 2.06 x 1.11 board is width-bound in portrait, so it can only ever be a
+   * quarter of a tall screen. Turned sideways it becomes height-bound and
+   * fills most of the viewport. iOS Safari cannot be told to rotate, so this
+   * is a nudge rather than a lock — drawing stays available either way.
+   */
+  useEffect(() => {
+    const portrait = window.matchMedia("(orientation: portrait)");
+    const measure = () => setIsPortrait(portrait.matches);
+    measure();
+    portrait.addEventListener("change", measure);
+    return () => portrait.removeEventListener("change", measure);
+  }, []);
+
+  const showRotateHint = drawingOpen && isMobile && isPortrait && !rotateHintDismissed;
 
   /*
    * The toolbar is pinned to the bottom of a fixed container, which the
@@ -394,13 +438,71 @@ export function Explore() {
   // only matter once the whiteboard toolbar is on screen
   const actionStyle: React.CSSProperties = {
     ...compactButton,
-    height: isMobile ? 44 : 36,
-    padding: isMobile ? "0 12px" : "0 12px",
+    height: isTouch ? 44 : 36,
+    padding: "0 12px",
   };
-  const fieldStyle: React.CSSProperties = { ...sendField, height: isMobile ? 44 : 38 };
+  const fieldStyle: React.CSSProperties = { ...sendField, height: isTouch ? 44 : 38 };
+  /*
+   * Sideways on a phone the board is framed to fill the height, so the
+   * controls get one short icon-only row along the bottom rather than two
+   * stacked rails — every extra row comes straight off the board.
+   */
+  const oneRow = isShort;
+  const iconOnly = isTouch || oneRow;
   /** which tool groups the current mode can actually use */
   const showColours = tool.mode !== "eraser";
   const showNibs = tool.mode !== "note";
+
+  const actionButtons = (
+    <>
+          <button
+            type="button"
+            aria-label="Clear the board"
+            onClick={() => {
+              clearBoard.current?.();
+              setNoteDraft(null);
+            }}
+            style={actionStyle}
+          >
+            <Trash2 style={{ height: 15, width: 15 }} />
+            {!iconOnly && "Clear"}
+          </button>
+          <button
+            type="button"
+            aria-label="Download the drawing"
+            onClick={downloadDrawing}
+            disabled={!hasDrawing}
+            style={{ ...actionStyle, opacity: hasDrawing ? 1 : 0.45 }}
+          >
+            <Download style={{ height: 15, width: 15 }} />
+            {!iconOnly && "Download"}
+          </button>
+          <button
+            type="button"
+            aria-label="Send the drawing to John"
+            onClick={() => {
+              // the note editor and the send form share the same space
+              deselectNote.current?.();
+              setNoteDraft(null);
+              setSendOpen((open) => !open);
+            }}
+            disabled={!hasDrawing}
+            style={{
+              ...actionStyle,
+              opacity: hasDrawing ? 1 : 0.45,
+              borderColor:
+                sendStatus === "error" ? "rgb(var(--color-clay))" : "rgb(var(--color-divider))",
+            }}
+          >
+            <Send style={{ height: 15, width: 15 }} />
+            {sendStatus === "sent" && !iconOnly ? "Sent — thank you" : iconOnly ? "" : "Send to John"}
+          </button>
+          <button type="button" aria-label="Done" onClick={leaveDrawing} style={actionStyle}>
+            <Check style={{ height: 15, width: 15 }} />
+            {!iconOnly && "Done"}
+          </button>
+    </>
+  );
 
   const overlaysHidden = photosOpen || drawingOpen;
   const overlayHits: React.CSSProperties["pointerEvents"] = overlaysHidden ? "none" : "auto";
@@ -620,6 +722,35 @@ export function Explore() {
           transition: "bottom 320ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
+        {showRotateHint && (
+          <div
+            style={{
+              ...toolRail,
+              gap: 10,
+              padding: "8px 10px 8px 14px",
+              fontSize: 13,
+              color: "rgb(var(--color-ink))",
+            }}
+          >
+            <RotateCw style={{ height: 16, width: 16, flexShrink: 0 }} />
+            <span>Turn your phone sideways for a much bigger board</span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setRotateHintDismissed(true)}
+              style={{
+                ...toolChip(false, false),
+                height: 30,
+                width: 30,
+                flexShrink: 0,
+                color: "rgb(var(--color-muted))",
+              }}
+            >
+              <X style={{ height: 14, width: 14 }} />
+            </button>
+          </div>
+        )}
+
         {/* Send form: the second, deliberate press that actually sends */}
         {sendOpen && (
           <div
@@ -750,7 +881,7 @@ export function Explore() {
               aria-label={label}
               aria-pressed={tool.mode === mode}
               onClick={() => pickTool({ mode: mode as BoardMode })}
-              style={toolChip(tool.mode === mode, isMobile)}
+              style={toolChip(tool.mode === mode, isTouch)}
             >
               <Icon style={{ height: 16, width: 16 }} />
             </button>
@@ -762,7 +893,7 @@ export function Explore() {
             desktop it stays dimmed, where holding the width steady is worth
             more than the room it costs.
           */}
-          {(showColours || !isMobile) && (
+          {(showColours || !iconOnly) && (
             <>
               <span style={railDivider} />
               {(tool.mode === "note" ? BOARD_NOTE_COLOURS : BOARD_INKS).map((colour) => {
@@ -780,8 +911,8 @@ export function Explore() {
                     style={{
                       // a thumb needs more than the swatch itself, so the
                       // button is padded out around a smaller dot
-                      height: isMobile ? 40 : 26,
-                      width: isMobile ? 40 : 26,
+                      height: isTouch ? 40 : 26,
+                      width: isTouch ? 40 : 26,
                       padding: 0,
                       borderRadius: 999,
                       background: colour,
@@ -798,7 +929,7 @@ export function Explore() {
             </>
           )}
 
-          {(showNibs || !isMobile) && (
+          {(showNibs || !iconOnly) && (
             <>
               <span style={railDivider} />
               {BOARD_NIBS.map((width) => (
@@ -810,7 +941,7 @@ export function Explore() {
                   onClick={() => pickTool({ width })}
                   disabled={!showNibs}
                   style={{
-                    ...toolChip(tool.width === width, isMobile),
+                    ...toolChip(tool.width === width, isTouch),
                     opacity: showNibs ? 1 : 0.35,
                   }}
                 >
@@ -828,56 +959,16 @@ export function Explore() {
               ))}
             </>
           )}
+          {oneRow && <span style={railDivider} />}
+          {oneRow && actionButtons}
         </div>
 
-        {/* Actions. Labels drop to icons on a phone so the row stays on one line. */}
-        <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
-          <button
-            type="button"
-            aria-label="Clear the board"
-            onClick={() => {
-              clearBoard.current?.();
-              setNoteDraft(null);
-            }}
-            style={actionStyle}
-          >
-            <Trash2 style={{ height: 15, width: 15 }} />
-            {!isMobile && "Clear"}
-          </button>
-          <button
-            type="button"
-            aria-label="Download the drawing"
-            onClick={downloadDrawing}
-            disabled={!hasDrawing}
-            style={{ ...actionStyle, opacity: hasDrawing ? 1 : 0.45 }}
-          >
-            <Download style={{ height: 15, width: 15 }} />
-            {!isMobile && "Download"}
-          </button>
-          <button
-            type="button"
-            aria-label="Send the drawing to John"
-            onClick={() => {
-              // the note editor and the send form share the same space
-              deselectNote.current?.();
-              setNoteDraft(null);
-              setSendOpen((open) => !open);
-            }}
-            disabled={!hasDrawing}
-            style={{
-              ...actionStyle,
-              opacity: hasDrawing ? 1 : 0.45,
-              borderColor:
-                sendStatus === "error" ? "rgb(var(--color-clay))" : "rgb(var(--color-divider))",
-            }}
-          >
-            <Send style={{ height: 15, width: 15 }} />
-            {sendStatus === "sent" ? "Sent — thank you" : isMobile ? "" : "Send to John"}
-          </button>
-          <button type="button" onClick={leaveDrawing} style={actionStyle}>
-            Done
-          </button>
-        </div>
+        {/* Actions. Sideways on a phone they join the row above instead. */}
+        {!oneRow && (
+          <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
+            {actionButtons}
+          </div>
+        )}
       </div>
 
       <ExplorePanel item={selected} onClose={() => setSelectedId(null)} />

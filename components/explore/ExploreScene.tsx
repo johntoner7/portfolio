@@ -1795,18 +1795,51 @@ export function laptopViewpoint(item: ExploreItem) {
  * frustum has to stand much further back than a desktop's to fit the same
  * 2.06m board on screen, and a cropped board is a board you can't draw on.
  */
-function whiteboardViewpoint(camera: THREE.PerspectiveCamera) {
+function whiteboardViewpoint(camera: THREE.PerspectiveCamera, reserved = 0) {
   const halfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
-  const margin = 1.18;
-  const forHeight = ((BOARD_SIZE[1] / 2) * margin) / Math.tan(halfFov);
-  const forWidth = ((BOARD_SIZE[0] / 2) * margin) / (Math.tan(halfFov) * camera.aspect);
-  const distance = THREE.MathUtils.clamp(Math.max(forHeight, forWidth), 1.0, 3.1);
+  const tan = Math.tan(halfFov);
+  /*
+   * `reserved` is the share of the viewport the toolbar covers along the
+   * bottom. The board is framed inside what is left rather than the whole
+   * screen, so it can be pushed right up to the controls without ending up
+   * behind them. 1.06 leaves a hair of breathing room inside that band.
+   */
+  const usable = THREE.MathUtils.clamp(1 - reserved, 0.35, 1);
+  const margin = 1.06;
+  const forHeight = ((BOARD_SIZE[1] / 2) * margin) / (tan * usable);
+  const forWidth = ((BOARD_SIZE[0] / 2) * margin) / (tan * camera.aspect);
+  // 0.85 is as close as the board can be framed without the near plane
+  // reaching it; nothing in the room sits at eye height in front of it
+  const distance = THREE.MathUtils.clamp(Math.max(forHeight, forWidth), 0.85, 3.1);
+
+  /*
+   * Dropping the camera below the board's centre lifts the board in the
+   * frame, clearing the toolbar. Done this way rather than by tilting,
+   * because the board stays parallel to the image plane and so keeps its
+   * square corners — a pitched camera would keystone it.
+   */
+  const visibleHeight = 2 * distance * tan;
+  const lift = (reserved / 2) * visibleHeight;
+
   return {
     pos: new THREE.Vector2(BOARD_ANCHOR[0] - BOARD_FACE - distance, BOARD_ANCHOR[2]),
-    y: BOARD_ANCHOR[1],
+    y: BOARD_ANCHOR[1] - lift,
     yaw: -Math.PI / 2,
     pitch: 0,
   };
+}
+
+/**
+ * Roughly what the whiteboard toolbar covers. A short viewport (a phone on
+ * its side) gets the single icon-only row; anything taller gets the stacked
+ * rails. Only used to keep the board clear of it, so an estimate is fine.
+ */
+const BOARD_UI_BAND = { short: 74, tall: 152 };
+
+function reservedForUi(heightPx: number) {
+  if (!heightPx) return 0;
+  const band = heightPx < 540 ? BOARD_UI_BAND.short : BOARD_UI_BAND.tall;
+  return THREE.MathUtils.clamp(band / heightPx, 0, 0.4);
 }
 
 /** Embeds: the laptop, open, with the tools running on it. */
@@ -2341,6 +2374,8 @@ function Player({
   /** docked at the whiteboard: the pointer draws instead of steering */
   const drawing = useRef(false);
   const preDrawPose = useRef<Pose | null>(null);
+  /** eye height while docked, which sits below the board's centre */
+  const eyeY = useRef(EYE_HEIGHT);
   const boardPose = useRef<Pose | null>(null);
 
   const clampTarget = (v: THREE.Vector2) => {
@@ -2394,7 +2429,10 @@ function Player({
         pitch: pitch.current,
       };
       preDrawPose.current = here;
-      boardPose.current = whiteboardViewpoint(camera as THREE.PerspectiveCamera);
+      boardPose.current = whiteboardViewpoint(
+        camera as THREE.PerspectiveCamera,
+        reservedForUi(gl.domElement.clientHeight),
+      );
       cinematic.current = {
         from: here,
         to: boardPose.current,
@@ -2404,6 +2442,9 @@ function Player({
         // own pose has to land on the framed one or leaving would snap
         release: true,
         onDone: () => {
+          // land on the docked eye height, so the gate below holds it there
+          // instead of easing up to it after the shot has already finished
+          eyeY.current = boardPose.current?.y ?? EYE_HEIGHT;
           drawing.current = true;
           done();
         },
@@ -2417,6 +2458,7 @@ function Player({
       drawing.current = false;
       preDrawPose.current = null;
       boardPose.current = null;
+      eyeY.current = EYE_HEIGHT;
       if (!back || !docked) return;
       cinematic.current = {
         from: docked,
@@ -2448,7 +2490,7 @@ function Player({
       handle.deselectNote.current = null;
       handle.deleteNote.current = null;
     };
-  }, [camera, ctx, handle, laptop, still]);
+  }, [camera, ctx, gl, handle, laptop, still]);
 
   // Arriving in the room is standing up from that same laptop.
   useEffect(() => {
@@ -2640,9 +2682,30 @@ function Player({
       return;
     }
 
-    // Docked at the board, the camera is simply held where the docking shot
-    // released it — WASD, tap-to-walk and the head bob all stand down.
-    if (drawing.current) return;
+    /*
+     * Docked at the board: WASD, tap-to-walk and the head bob all stand
+     * down, but the framing is re-solved every frame rather than held at
+     * whatever the docking shot left. That is what makes turning a phone
+     * to landscape re-frame — the binding axis swaps from width to height
+     * and the board eases in to fill it, instead of staying at the pose
+     * computed for the old aspect.
+     */
+    if (drawing.current) {
+      const pose = whiteboardViewpoint(
+        state.camera as THREE.PerspectiveCamera,
+        reservedForUi(gl.domElement.clientHeight),
+      );
+      boardPose.current = pose;
+      const k = still ? 1 : 1 - Math.exp(-12 * Math.min(delta, 0.05));
+      pos.current.lerp(pose.pos, k);
+      yaw.current = pose.yaw;
+      pitch.current = pose.pitch;
+      eyeY.current = THREE.MathUtils.lerp(eyeY.current, pose.y, k);
+      state.camera.position.set(pos.current.x, eyeY.current, pos.current.y);
+      state.camera.rotation.y = pose.yaw;
+      state.camera.rotation.x = pose.pitch;
+      return;
+    }
 
     const step = Math.min(delta, 0.05);
     const held = keys.current;
