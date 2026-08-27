@@ -1,13 +1,34 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronUp, Compass, Info } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronUp,
+  Compass,
+  Download,
+  Eraser,
+  Info,
+  Pencil,
+  Send,
+  StickyNote,
+  Trash2,
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useThemeMode } from "@/hooks/useThemeMode";
+import { useBelfastWeather } from "@/hooks/useBelfastWeather";
 import { exploreItems } from "@/components/explore/exploreItems";
 import { ExplorePanel } from "@/components/explore/ExplorePanel";
 import { ExploreCredits } from "@/components/explore/ExploreCredits";
 import { PhotoScrapbook } from "@/components/photos/PhotoScrapbook";
 import type { PlayerHandle } from "@/components/explore/ExploreScene";
+import {
+  BOARD_INKS,
+  BOARD_NIBS,
+  BOARD_NOTE_COLOURS,
+  DEFAULT_TOOL,
+  NOTE_MAX_CHARS,
+  type BoardMode,
+  type BoardTool,
+} from "@/components/explore/boardTools";
 
 const ExploreScene = lazy(() =>
   import("@/components/explore/ExploreScene").then((m) => ({ default: m.ExploreScene })),
@@ -30,9 +51,71 @@ const overlayButton: React.CSSProperties = {
   cursor: "pointer",
 };
 
+/** A floating group of whiteboard controls. */
+const toolRail: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "6px 10px",
+  borderRadius: 999,
+  border: "1px solid rgb(var(--color-divider))",
+  background: "rgb(var(--color-surface) / 0.88)",
+  backdropFilter: "blur(10px)",
+};
+
+const railDivider: React.CSSProperties = {
+  width: 1,
+  height: 22,
+  background: "rgb(var(--color-divider))",
+};
+
+/** Shorter than `overlayButton` — several of these share one row. */
+const compactButton: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  height: 36,
+  touchAction: "manipulation",
+  padding: "0 12px",
+  borderRadius: 999,
+  border: "1px solid rgb(var(--color-divider))",
+  background: "rgb(var(--color-surface) / 0.9)",
+  color: "rgb(var(--color-ink))",
+  fontSize: 13,
+  cursor: "pointer",
+};
+
+const toolChip = (active: boolean): React.CSSProperties => ({
+  display: "inline-grid",
+  placeItems: "center",
+  height: 34,
+  width: 34,
+  touchAction: "manipulation",
+  borderRadius: 999,
+  cursor: "pointer",
+  color: "rgb(var(--color-ink))",
+  border: active ? "1px solid rgb(var(--color-ink))" : "1px solid transparent",
+  background: active ? "rgb(var(--color-ink) / 0.10)" : "transparent",
+});
+
+const sendField: React.CSSProperties = {
+  height: 38,
+  padding: "0 10px",
+  borderRadius: 10,
+  border: "1px solid rgb(var(--color-divider))",
+  background: "rgb(var(--color-surface))",
+  color: "rgb(var(--color-ink))",
+  fontSize: 13,
+  fontFamily: "inherit",
+  width: "100%",
+  boxSizing: "border-box",
+};
+
 export function Explore() {
   const theme = useThemeMode();
   const isMobile = useIsMobile();
+  // the window looks out on the real Belfast; null until it lands, and on failure
+  const weather = useBelfastWeather();
   // below 900px the panel is a bottom sheet and sits over the walk button;
   // above it, the panel is a side rail and the room stays usable behind it
   const panelIsSheet = useIsMobile(900);
@@ -44,7 +127,30 @@ export function Explore() {
   const walking = useRef(false);
   const recentre = useRef<(() => void) | null>(null);
   const sitDown = useRef<((done: () => void) => void) | null>(null);
-  const handle: PlayerHandle = useMemo(() => ({ walking, recentre, sitDown }), []);
+  const standAtBoard = useRef<((done: () => void) => void) | null>(null);
+  const leaveBoard = useRef<(() => void) | null>(null);
+  const clearBoard = useRef<(() => void) | null>(null);
+  const boardImage = useRef<(() => string | null) | null>(null);
+  const setBoardTool = useRef<((tool: BoardTool) => void) | null>(null);
+  const setNoteText = useRef<((text: string) => void) | null>(null);
+  const deselectNote = useRef<(() => void) | null>(null);
+  const deleteNote = useRef<(() => void) | null>(null);
+  const handle: PlayerHandle = useMemo(
+    () => ({
+      walking,
+      recentre,
+      sitDown,
+      standAtBoard,
+      leaveBoard,
+      clearBoard,
+      boardImage,
+      setBoardTool,
+      setNoteText,
+      deselectNote,
+      deleteNote,
+    }),
+    [],
+  );
   const [leaving, setLeaving] = useState(false);
   const [arriving, setArriving] = useState(true);
   // the controls stay out of the way until the stand-up move has finished
@@ -55,6 +161,44 @@ export function Explore() {
   const exitTimer = useRef<number | null>(null);
   // the scrapbook opens in place, over the room, rather than navigating away
   const [photosOpen, setPhotosOpen] = useState(false);
+  // docked at the whiteboard, drawing on it
+  const [drawingOpen, setDrawingOpen] = useState(false);
+  const [hasDrawing, setHasDrawing] = useState(false);
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [tool, setTool] = useState<BoardTool>(DEFAULT_TOOL);
+  // null when no sticky note is selected; otherwise that note's text
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
+  const noteField = useRef<HTMLTextAreaElement>(null);
+  // Send opens a small form first, so the drawing only ever leaves the
+  // browser on a second, deliberate press.
+  const [sendOpen, setSendOpen] = useState(false);
+  const [senderName, setSenderName] = useState("");
+  const [senderNote, setSenderNote] = useState("");
+
+  // the scene reads these mid-stroke, so push every change straight through
+  useEffect(() => {
+    setBoardTool.current?.(tool);
+  }, [tool]);
+
+  const pickTool = useCallback((patch: Partial<BoardTool>) => {
+    setTool((current) => {
+      // leaving note mode drops the selection, so the editor closes with it
+      if (patch.mode && patch.mode !== "note" && current.mode === "note") {
+        deselectNote.current?.();
+        setNoteDraft(null);
+      }
+      return { ...current, ...patch };
+    });
+  }, []);
+
+  /** The scene reports which note was just tapped, so the field can open. */
+  const handleNoteSelect = useCallback((text: string | null) => {
+    setNoteDraft(text);
+    if (text !== null) {
+      // focus without scrolling the fixed room container around
+      window.requestAnimationFrame(() => noteField.current?.focus({ preventScroll: true }));
+    }
+  }, []);
 
   const selected = useMemo(
     () => exploreItems.find((item) => item.id === selectedId) ?? null,
@@ -62,9 +206,28 @@ export function Explore() {
   );
 
   const dismissHint = useCallback(() => setHintVisible(false), []);
+  // a fresh mark re-arms Send, so a redraw after sending can be sent again
+  const markDrawn = useCallback(() => {
+    setHasDrawing(true);
+    setSendStatus("idle");
+  }, []);
   const handleSelect = useCallback(
     (id: string) => {
       setHintVisible(false);
+      /*
+       * The whiteboard is a bespoke prop rather than a data-driven exhibit,
+       * so it has no exploreItems entry — the camera docks square-on to it
+       * and the pointer becomes a marker until you're done. The pan itself
+       * is the transition; no fade cover, the same as Recentre.
+       */
+      if (id === "whiteboard") {
+        walking.current = false;
+        setPressed(false);
+        setHasDrawing(false);
+        setSendStatus("idle");
+        standAtBoard.current?.(() => setDrawingOpen(true));
+        return;
+      }
       const item = exploreItems.find((entry) => entry.id === id);
       // the laptop is the way back: sit down at it and the site comes up
       if (item?.exitsToSite) {
@@ -103,6 +266,45 @@ export function Explore() {
     },
     [navigate],
   );
+
+  const leaveDrawing = useCallback(() => {
+    leaveBoard.current?.();
+    setDrawingOpen(false);
+    setHasDrawing(false);
+    setSendStatus("idle");
+    setSendOpen(false);
+    setSenderName("");
+    setSenderNote("");
+    setNoteDraft(null);
+  }, []);
+
+  /** Explicit opt-in: the board is only ever sent by confirming this form. */
+  const sendDrawing = useCallback(async () => {
+    const image = boardImage.current?.();
+    if (!image) return;
+    setSendStatus("sending");
+    try {
+      const res = await fetch("/api/send-whiteboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, name: senderName, message: senderNote }),
+      });
+      setSendStatus(res.ok ? "sent" : "error");
+      if (res.ok) setSendOpen(false);
+    } catch {
+      setSendStatus("error");
+    }
+  }, [senderName, senderNote]);
+
+  /** Takes the drawing away without sending it anywhere. */
+  const downloadDrawing = useCallback(() => {
+    const image = boardImage.current?.();
+    if (!image) return;
+    const link = document.createElement("a");
+    link.href = image;
+    link.download = "whiteboard.png";
+    link.click();
+  }, []);
 
   const closePhotos = useCallback(() => {
     setLeaving(true);
@@ -149,6 +351,9 @@ export function Explore() {
     };
   }, []);
 
+  const overlaysHidden = photosOpen || drawingOpen;
+  const overlayHits: React.CSSProperties["pointerEvents"] = overlaysHidden ? "none" : "auto";
+
   const setWalking = (value: boolean) => {
     walking.current = value;
     setPressed(value);
@@ -188,7 +393,10 @@ export function Explore() {
           handle={handle}
           onSelect={handleSelect}
           onMove={dismissHint}
+          onDrawStart={markDrawn}
+          onNoteSelect={handleNoteSelect}
           quality={isMobile ? "mobile" : "desktop"}
+          weather={weather}
         />
       </Suspense>
 
@@ -205,12 +413,14 @@ export function Explore() {
           gap: 8,
           padding:
             "calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left))",
-          pointerEvents: photosOpen ? "none" : "auto",
-          opacity: photosOpen ? 0 : 1,
+          // the children set pointerEvents themselves, so hiding the strip has
+          // to reach them too or a faded-out Back link stays clickable
+          pointerEvents: overlaysHidden ? "none" : "auto",
+          opacity: overlaysHidden ? 0 : 1,
           transition: "opacity 200ms ease",
         }}
       >
-        <Link to="/" style={{ ...overlayButton, pointerEvents: "auto" }}>
+        <Link to="/" style={{ ...overlayButton, pointerEvents: overlayHits }}>
           <ArrowLeft style={{ height: 15, width: 15 }} />
           Back
         </Link>
@@ -218,7 +428,7 @@ export function Explore() {
           <button
             type="button"
             onClick={() => setCreditsOpen(true)}
-            style={{ ...overlayButton, pointerEvents: "auto" }}
+            style={{ ...overlayButton, pointerEvents: overlayHits }}
             aria-label="Model credits"
           >
             <Info style={{ height: 15, width: 15 }} />
@@ -227,7 +437,7 @@ export function Explore() {
           <button
             type="button"
             onClick={() => recentre.current?.()}
-            style={{ ...overlayButton, pointerEvents: "auto" }}
+            style={{ ...overlayButton, pointerEvents: overlayHits }}
             aria-label="Return to the entrance"
           >
             <Compass style={{ height: 15, width: 15 }} />
@@ -246,7 +456,7 @@ export function Explore() {
           width: "min(90vw, 420px)",
           textAlign: "center",
           pointerEvents: "none",
-          opacity: hintVisible && !leaving && !photosOpen && introDone ? 1 : 0,
+          opacity: hintVisible && !leaving && !overlaysHidden && introDone ? 1 : 0,
           transition: "opacity 500ms ease",
           color: "rgb(var(--color-ink))",
           textShadow: "0 2px 12px rgba(0,0,0,0.5)",
@@ -295,7 +505,7 @@ export function Explore() {
         style={{
           position: "absolute",
           bottom:
-            (selected && panelIsSheet) || leaving || photosOpen || !introDone
+            (selected && panelIsSheet) || leaving || overlaysHidden || !introDone
               ? "-120px"
               : "calc(24px + env(safe-area-inset-bottom))",
           left: "50%",
@@ -330,6 +540,270 @@ export function Explore() {
           }}
         />
       </button>
+
+      {/* Whiteboard toolbar — only while docked at the board */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: drawingOpen ? "calc(20px + env(safe-area-inset-bottom))" : "-260px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 8,
+          width: "calc(100vw - 24px)",
+          maxWidth: 620,
+          transition: "bottom 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        {/* Note editor — appears against the note you just tapped */}
+        {noteDraft !== null && (
+          <div
+            style={{
+              ...toolRail,
+              borderRadius: 14,
+              gap: 8,
+              width: "100%",
+              maxWidth: 340,
+              alignItems: "flex-end",
+            }}
+          >
+            <textarea
+              ref={noteField}
+              value={noteDraft}
+              onChange={(e) => {
+                setNoteDraft(e.target.value);
+                setNoteText.current?.(e.target.value);
+              }}
+              placeholder="Write on the note…"
+              maxLength={NOTE_MAX_CHARS}
+              rows={2}
+              aria-label="Sticky note text"
+              style={{
+                ...sendField,
+                height: "auto",
+                paddingTop: 8,
+                paddingBottom: 8,
+                resize: "none",
+                lineHeight: 1.4,
+              }}
+            />
+            <button
+              type="button"
+              aria-label="Remove this note"
+              onClick={() => {
+                deleteNote.current?.();
+                setNoteDraft(null);
+              }}
+              style={{ ...compactButton, flexShrink: 0, padding: "0 10px" }}
+            >
+              <Trash2 style={{ height: 15, width: 15 }} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                deselectNote.current?.();
+                setNoteDraft(null);
+              }}
+              style={{ ...compactButton, flexShrink: 0 }}
+            >
+              Done
+            </button>
+          </div>
+        )}
+
+        {/* Tools: what the marker does, then what colour, then how thick */}
+        <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
+          {([
+            ["pen", Pencil, "Pen"],
+            ["eraser", Eraser, "Eraser"],
+            ["note", StickyNote, "Sticky note"],
+          ] as const).map(([mode, Icon, label]) => (
+            <button
+              key={mode}
+              type="button"
+              aria-label={label}
+              aria-pressed={tool.mode === mode}
+              onClick={() => pickTool({ mode: mode as BoardMode })}
+              style={toolChip(tool.mode === mode)}
+            >
+              <Icon style={{ height: 16, width: 16 }} />
+            </button>
+          ))}
+
+          <span style={railDivider} />
+
+          {(tool.mode === "note" ? BOARD_NOTE_COLOURS : BOARD_INKS).map((colour) => {
+            const active =
+              tool.mode === "note" ? tool.noteColour === colour : tool.colour === colour;
+            return (
+              <button
+                key={colour}
+                type="button"
+                aria-label={`Colour ${colour}`}
+                aria-pressed={active}
+                onClick={() =>
+                  pickTool(tool.mode === "note" ? { noteColour: colour } : { colour })
+                }
+                style={{
+                  height: 26,
+                  width: 26,
+                  borderRadius: 999,
+                  background: colour,
+                  cursor: "pointer",
+                  // the eraser doesn't use a colour, so dim the row rather
+                  // than hide it and make the rail jump width
+                  opacity: tool.mode === "eraser" ? 0.35 : 1,
+                  border: active
+                    ? "2px solid rgb(var(--color-ink))"
+                    : "1px solid rgb(var(--color-divider))",
+                  boxShadow: active ? "0 0 0 3px rgb(var(--color-ink) / 0.12)" : "none",
+                }}
+              />
+            );
+          })}
+
+          <span style={railDivider} />
+
+          {BOARD_NIBS.map((width) => (
+            <button
+              key={width}
+              type="button"
+              aria-label={`Nib ${width}`}
+              aria-pressed={tool.width === width}
+              onClick={() => pickTool({ width })}
+              disabled={tool.mode === "note"}
+              style={{
+                ...toolChip(tool.width === width),
+                opacity: tool.mode === "note" ? 0.35 : 1,
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  borderRadius: 999,
+                  background: "rgb(var(--color-ink))",
+                  // the swatch reads as the nib it selects, scaled to fit
+                  height: Math.max(3, width * 0.55),
+                  width: Math.max(3, width * 0.55),
+                }}
+              />
+            </button>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
+          <button
+            type="button"
+            onClick={() => {
+              clearBoard.current?.();
+              setNoteDraft(null);
+            }}
+            style={compactButton}
+          >
+            <Trash2 style={{ height: 15, width: 15 }} />
+            Clear
+          </button>
+          <button
+            type="button"
+            onClick={downloadDrawing}
+            disabled={!hasDrawing}
+            style={{ ...compactButton, opacity: hasDrawing ? 1 : 0.45 }}
+          >
+            <Download style={{ height: 15, width: 15 }} />
+            Download
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // the note editor and the send form share the same space
+              deselectNote.current?.();
+              setNoteDraft(null);
+              setSendOpen((open) => !open);
+            }}
+            disabled={!hasDrawing}
+            style={{
+              ...compactButton,
+              opacity: hasDrawing ? 1 : 0.45,
+              borderColor:
+                sendStatus === "error" ? "rgb(var(--color-clay))" : "rgb(var(--color-divider))",
+            }}
+          >
+            <Send style={{ height: 15, width: 15 }} />
+            {sendStatus === "sent" ? "Sent — thank you" : "Send to John"}
+          </button>
+          <button type="button" onClick={leaveDrawing} style={compactButton}>
+            Done
+          </button>
+        </div>
+      </div>
+
+      {/* Send form: the second, deliberate press that actually sends */}
+      {drawingOpen && sendOpen && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "calc(150px + env(safe-area-inset-bottom))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "calc(100vw - 24px)",
+            maxWidth: 380,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            padding: 14,
+            borderRadius: 16,
+            border: "1px solid rgb(var(--color-divider))",
+            background: "rgb(var(--color-surface) / 0.94)",
+            backdropFilter: "blur(10px)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 12, color: "rgb(var(--color-muted))", lineHeight: 1.5 }}>
+            This emails the board to John as a PNG. Both fields are optional.
+          </p>
+          <input
+            value={senderName}
+            onChange={(e) => setSenderName(e.target.value)}
+            placeholder="Your name"
+            maxLength={80}
+            style={sendField}
+          />
+          <textarea
+            value={senderNote}
+            onChange={(e) => setSenderNote(e.target.value)}
+            placeholder="A note to go with it"
+            maxLength={600}
+            rows={3}
+            style={{ ...sendField, resize: "vertical", paddingTop: 10, height: "auto" }}
+          />
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button type="button" onClick={() => setSendOpen(false)} style={compactButton}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={sendDrawing}
+              disabled={sendStatus === "sending"}
+              style={{
+                ...compactButton,
+                background: "rgb(var(--color-ink))",
+                color: "rgb(var(--color-surface))",
+                borderColor: "rgb(var(--color-ink))",
+              }}
+            >
+              {sendStatus === "sending" ? "Sending…" : "Send it"}
+            </button>
+          </div>
+          {sendStatus === "error" && (
+            <p style={{ margin: 0, fontSize: 12, color: "rgb(var(--color-clay))" }}>
+              That didn't send. Have another go in a moment.
+            </p>
+          )}
+        </div>
+      )}
 
       <ExplorePanel item={selected} onClose={() => setSelectedId(null)} />
       <ExploreCredits open={creditsOpen} onClose={() => setCreditsOpen(false)} />

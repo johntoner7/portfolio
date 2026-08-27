@@ -18,6 +18,9 @@ import * as THREE from "three";
 import { darkWoodPalette, lightWoodPalette, makeWoodTextures } from "@/utils/woodTexture";
 import { makeCeilingTextures } from "./ceilingTexture";
 import { makeWhiteboardTexture } from "./whiteboardTexture";
+import { makeCloudTexture } from "./cloudTexture";
+import type { Weather } from "@/utils/weather";
+import { DEFAULT_TOOL, type BoardTool } from "./boardTools";
 import { makeLaptopScreenTexture } from "./laptopScreenTexture";
 import { ModelBoundary, preloadModel, useModel } from "./useModel";
 import { siteData } from "@/lib/data";
@@ -180,10 +183,39 @@ type SceneRefs = {
   floor: THREE.Object3D | null;
   marker: THREE.Vector3;
   markerAt: number;
+  /** the board's own plane, so the player can raycast UVs off it */
+  whiteboard: THREE.Object3D | null;
+  /**
+   * u/v in the plane's own space; the board decides what the phase means.
+   * Returns the selected note's text, or null when nothing is selected, so
+   * the toolbar can open its editor on the right note.
+   */
+  whiteboardPointer: ((u: number, v: number, phase: "down" | "move" | "up") => string | null) | null;
+  whiteboardClear: (() => void) | null;
+  whiteboardImage: (() => string | null) | null;
+  /** writes into the selected note */
+  whiteboardNoteText: ((text: string) => void) | null;
+  whiteboardDeselect: (() => void) | null;
+  /** takes the selected note off the board */
+  whiteboardDeleteNote: (() => void) | null;
+  /** live settings, written by the toolbar and read mid-stroke */
+  whiteboardTool: BoardTool;
 };
+
 
 const SceneCtx = createContext<MutableRefObject<SceneRefs> | null>(null);
 const QualityCtx = createContext<Quality>("desktop");
+/** Live Belfast conditions, or null when the fetch hasn't landed / failed. */
+const WeatherCtx = createContext<Weather | null>(null);
+
+const mix = (from: string, to: string, t: number) =>
+  new THREE.Color(from).lerp(new THREE.Color(to), THREE.MathUtils.clamp(t, 0, 1));
+
+/* The sky, clear and overcast, at both ends of the day. */
+const SKY_CLEAR = { night: "#080c15", day: "#6ea8e0" };
+const SKY_OVERCAST = { night: "#171d28", day: "#9fb0c2" };
+const GROUND_TONE = { night: "#243218", day: "#7f9a5c" };
+const CLOUD_TINT = { night: "#2b3240", day: "#f2f5f8" };
 
 const now = () => performance.now() / 1000;
 
@@ -491,6 +523,7 @@ function TapMarker({ theme }: { theme: ThemeName }) {
 
 function Window({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
+  const weather = useContext(WeatherCtx);
 
   return (
     <group position={[WINDOW.x, WINDOW.y, -ROOM_Z + 0.06]}>
@@ -543,7 +576,12 @@ function Window({ theme }: { theme: ThemeName }) {
         <boxGeometry args={[2.3, 0.08, 0.3]} />
         <meshStandardMaterial color={t.trim} roughness={0.85} />
       </mesh>
-      <directionalLight position={[3.4, 4.2, -8]} intensity={t.key} color={t.daylight} />
+      {/* overcast outside takes a little off the light coming in */}
+      <directionalLight
+        position={[3.4, 4.2, -8]}
+        intensity={t.key * (1 - (weather?.cloud ?? 0) * 0.3)}
+        color={t.daylight}
+      />
     </group>
   );
 }
@@ -701,7 +739,7 @@ const MOON_MARIA: [number, number, number, number][] = [
   [-0.129, -0.418, 0.67, 0.2],
 ];
 
-function Drizzle() {
+function Drizzle({ intensity }: { intensity: number }) {
   const still = useMemo(prefersReducedMotion, []);
 
   const geometry = useMemo(() => {
@@ -741,22 +779,113 @@ function Drizzle() {
   });
 
   return (
+    // heavier rain is denser on the glass, not faster
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial color="#9db4d4" transparent opacity={0.38} />
+      <lineBasicMaterial color="#9db4d4" transparent opacity={0.18 + intensity * 0.34} />
     </lineSegments>
+  );
+}
+
+/** How many puffs the bank holds at full overcast, and how far they drift. */
+const CLOUD_COUNT = 14;
+const CLOUD_WRAP = 95;
+
+const CLOUD_BANK = (() => {
+  // seeded, so the sky is the same arrangement every visit
+  let seed = 991127;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+  return Array.from({ length: CLOUD_COUNT }, () => ({
+    x: (random() * 2 - 1) * CLOUD_WRAP,
+    y: 26 + random() * 22,
+    z: -40 - random() * 38,
+    scale: 22 + random() * 26,
+    speed: 0.35 + random() * 0.5,
+  }));
+})();
+
+/**
+ * The cloud bank over the terrace. Thickens with the real cover: more puffs
+ * appear and they turn more opaque, so a clear Belfast morning shows almost
+ * nothing and a wet afternoon closes the sky in.
+ */
+function Clouds({ cover, daylight }: { cover: number; daylight: number }) {
+  const still = useMemo(prefersReducedMotion, []);
+  const texture = useMemo(makeCloudTexture, []);
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  const group = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    if (still || !group.current) return;
+    group.current.children.forEach((child, i) => {
+      child.position.x += CLOUD_BANK[i].speed * delta;
+      if (child.position.x > CLOUD_WRAP) child.position.x = -CLOUD_WRAP;
+    });
+  });
+
+  const tint = useMemo(() => mix(CLOUD_TINT.night, CLOUD_TINT.day, daylight), [daylight]);
+  // a bright sky still shows a few; overcast fills it
+  const shown = Math.round(THREE.MathUtils.clamp(cover, 0, 1) * CLOUD_COUNT);
+  const opacity = 0.28 + cover * 0.5;
+
+  if (shown === 0) return null;
+
+  return (
+    <group ref={group}>
+      {CLOUD_BANK.slice(0, shown).map((puff, i) => (
+        <mesh key={i} position={[puff.x, puff.y, puff.z]}>
+          <planeGeometry args={[puff.scale, puff.scale * 0.5]} />
+          <meshBasicMaterial
+            map={texture}
+            color={tint}
+            transparent
+            opacity={opacity}
+            depthWrite={false}
+            fog={false}
+          />
+        </mesh>
+      ))}
+    </group>
   );
 }
 
 function OutsideView({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
-  const ground = theme === "dark" ? "#243218" : "#7f9a5c";
+  const weather = useContext(WeatherCtx);
+
+  /*
+   * The window follows Belfast, not the theme toggle — that is the whole
+   * point of it being a window rather than a picture. Without a reading it
+   * falls back to the theme, which is exactly how the room behaved before.
+   */
+  const daylight = weather ? weather.daylight : theme === "dark" ? 0 : 1;
+  const cover = weather ? weather.cloud : 0;
+  // 0.6 is the value that reproduces the old fixed drizzle opacity exactly
+  const rain = weather ? weather.rain : theme === "dark" ? 0.6 : 0;
+  const isNight = daylight < 0.35;
+
   /*
    * The sky gets its own colour rather than reusing t.daylight. That value is
    * near-white (#eef4fd) because it doubles as the glass tint and the colour
    * of the light coming through the window — reading fine on those, but flat
    * grey as an actual sky.
    */
-  const sky = theme === "dark" ? "#080c15" : "#6ea8e0";
+  const sky = useMemo(
+    () =>
+      mix(SKY_CLEAR.night, SKY_CLEAR.day, daylight)
+        .lerp(mix(SKY_OVERCAST.night, SKY_OVERCAST.day, daylight), cover * 0.8)
+        .getStyle(),
+    [daylight, cover],
+  );
+
+  // overcast takes the life out of the grass rather than recolouring it
+  const ground = useMemo(
+    () => mix(GROUND_TONE.night, GROUND_TONE.day, daylight).multiplyScalar(1 - cover * 0.18).getStyle(),
+    [daylight, cover],
+  );
 
   // one loaded tile, cloned per position: geometry and materials are shared,
   // so the extra length costs a draw call each rather than another download
@@ -799,11 +928,12 @@ function OutsideView({ theme }: { theme: ThemeName }) {
         const material = m as THREE.MeshStandardMaterial;
         if (!material || material.name !== "Light") return;
         material.emissive = new THREE.Color(t.lamp);
-        material.emissiveIntensity = theme === "dark" ? 1.4 : 0;
+        // fades up through dusk instead of snapping on with the theme
+        material.emissiveIntensity = (1 - daylight) * 1.4;
       });
     });
     return lampModel;
-  }, [lampModel, t.lamp, theme]);
+  }, [lampModel, t.lamp, daylight]);
 
   return (
     <group position={[WINDOW.x, -STOREY, -ROOM_Z]}>
@@ -839,10 +969,13 @@ function OutsideView({ theme }: { theme: ThemeName }) {
         />
       ))}
 
-      {theme === "dark" && <Drizzle />}
+      <Clouds cover={cover} daylight={daylight} />
+
+      {/* only when it is actually raining on Belfast */}
+      {rain > 0 && <Drizzle intensity={rain} />}
 
       {/* one in each lane, passing in opposite directions — daytime only */}
-      {theme === "light" && (
+      {!isNight && (
         <>
           <group
             ref={(node) => {
@@ -870,7 +1003,7 @@ function OutsideView({ theme }: { theme: ThemeName }) {
         rotation={[0, Math.PI, 0]}
       />
 
-      {theme === "dark" && (
+      {isNight && (
         <group position={MOON.pos}>
           <mesh>
             <sphereGeometry args={[MOON.radius, 32, 24]} />
@@ -926,9 +1059,28 @@ function Door({ theme }: { theme: ThemeName }) {
   );
 }
 
+/**
+ * Whiteboard geometry, shared with the camera so "standing at the board"
+ * frames the drawing surface exactly. It hangs on the +X wall facing in, so
+ * its own +Z (and the local offset that lifts the plane off the backing
+ * board) points back along -X.
+ */
+const BOARD_ANCHOR = [ROOM_X - 0.08, 2.0, 1.15] as const;
+const BOARD_FACE = 0.035;
+const BOARD_SIZE = [2.06, 1.11] as const;
+/** sticky note and its lettering, in board-canvas pixels */
+const NOTE_SIZE = 96;
+const NOTE_PAD = 9;
+const NOTE_FONT = 13;
+const NOTE_LINE = 15;
+
 /** Whiteboard above the desk, carrying what he is actually working on. */
 function Whiteboard({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
+  const ctx = useContext(SceneCtx)!;
+  const board = useRef<THREE.Mesh>(null);
+  const pen = useRef<{ x: number; y: number } | null>(null);
+
   const texture = useMemo(
     () =>
       makeWhiteboardTexture(
@@ -942,14 +1094,281 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
 
   useEffect(() => () => texture.dispose(), [texture]);
 
+  /*
+   * Three layers composited into the texture's own canvas, because notes stay
+   * draggable after they're dropped: `printed` holds the heading/bullets/stats
+   * the board ships with, `ink` holds freehand strokes, and notes are objects
+   * redrawn on top every frame. Painting strokes straight onto the visible
+   * canvas would be cheaper, but then a note could never be picked back up
+   * without taking the ink under it too.
+   */
+  useEffect(() => {
+    const mesh = board.current;
+    const display = texture.image as HTMLCanvasElement;
+    const view = display.getContext("2d");
+    if (!mesh || !view) return;
+
+    const { width, height } = display;
+    const layer = () => {
+      const c = document.createElement("canvas");
+      c.width = width;
+      c.height = height;
+      return c;
+    };
+
+    // the board as it ships, captured before anyone draws on it
+    const printed = layer();
+    printed.getContext("2d")!.drawImage(display, 0, 0);
+    const ink = layer();
+    const inkPaint = ink.getContext("2d")!;
+
+    type Note = { x: number; y: number; colour: string; tilt: number; text: string };
+
+    let cleared = false;
+    let notes: Note[] = [];
+    let held: number | null = null;
+    /** the note the toolbar's text field is currently writing into */
+    let selected: Note | null = null;
+    let grabX = 0;
+    let grabY = 0;
+
+    /** Greedy wrap that also breaks words too long to fit on their own line. */
+    const wrapNote = (text: string, maxWidth: number) => {
+      const lines: string[] = [];
+      for (const paragraph of text.split("\n")) {
+        let line = "";
+        for (const word of paragraph.split(" ")) {
+          const candidate = line ? `${line} ${word}` : word;
+          if (view.measureText(candidate).width <= maxWidth) {
+            line = candidate;
+            continue;
+          }
+          if (line) lines.push(line);
+          line = word;
+          // a single unbroken word still has to be cut somewhere
+          while (view.measureText(line).width > maxWidth && line.length > 1) {
+            let cut = line.length - 1;
+            while (cut > 1 && view.measureText(line.slice(0, cut)).width > maxWidth) cut--;
+            lines.push(line.slice(0, cut));
+            line = line.slice(cut);
+          }
+        }
+        lines.push(line);
+      }
+      return lines;
+    };
+
+    const drawNote = (n: Note) => {
+      view.save();
+      view.translate(n.x, n.y);
+      view.rotate(n.tilt);
+      view.fillStyle = "rgba(0,0,0,0.12)";
+      view.fillRect(-NOTE_SIZE / 2 + 3, -NOTE_SIZE / 2 + 4, NOTE_SIZE, NOTE_SIZE);
+      view.fillStyle = n.colour;
+      view.fillRect(-NOTE_SIZE / 2, -NOTE_SIZE / 2, NOTE_SIZE, NOTE_SIZE);
+
+      if (n === selected) {
+        view.strokeStyle = "#1c1914";
+        view.lineWidth = 2;
+        view.setLineDash([5, 4]);
+        view.strokeRect(-NOTE_SIZE / 2 - 3, -NOTE_SIZE / 2 - 3, NOTE_SIZE + 6, NOTE_SIZE + 6);
+        view.setLineDash([]);
+      }
+
+      if (n.text) {
+        view.fillStyle = "#1c1914";
+        view.font = `500 ${NOTE_FONT}px "DM Sans", "Helvetica Neue", sans-serif`;
+        view.textBaseline = "top";
+        const inner = NOTE_SIZE - NOTE_PAD * 2;
+        const lines = wrapNote(n.text, inner).slice(0, Math.floor(inner / NOTE_LINE));
+        // vertically centred as a block, so short notes don't sit at the top
+        const top = -(lines.length * NOTE_LINE) / 2;
+        lines.forEach((line, i) => {
+          view.fillText(line, -inner / 2, top + i * NOTE_LINE, inner);
+        });
+      }
+      view.restore();
+    };
+
+    const compose = () => {
+      view.globalAlpha = 1;
+      view.fillStyle = t.paper;
+      view.fillRect(0, 0, width, height);
+      if (!cleared) view.drawImage(printed, 0, 0);
+      view.drawImage(ink, 0, 0);
+      notes.forEach(drawNote);
+      texture.needsUpdate = true;
+    };
+
+    /** Topmost note under a point — last drawn is nearest the front. */
+    const noteAt = (x: number, y: number) => {
+      for (let i = notes.length - 1; i >= 0; i--) {
+        const n = notes[i];
+        // the tilt is a couple of degrees, so an upright box is close enough
+        if (Math.abs(x - n.x) <= NOTE_SIZE / 2 && Math.abs(y - n.y) <= NOTE_SIZE / 2) return i;
+      }
+      return null;
+    };
+
+    const stroke = (x: number, y: number, start: boolean) => {
+      const tool = ctx.current.whiteboardTool;
+      const from = start ? null : pen.current;
+      const erasing = tool.mode === "eraser";
+      // The eraser lays down opaque board colour rather than clearing to
+      // transparent, so it rubs out the printed heading/bullets underneath
+      // as well as the visitor's own ink — rubbing a board takes off
+      // whatever is under it, and Clear is there for wiping the lot.
+      inkPaint.strokeStyle = erasing ? t.paper : tool.colour;
+      inkPaint.lineWidth = erasing ? tool.width * 2.5 : tool.width;
+      inkPaint.lineCap = "round";
+      inkPaint.lineJoin = "round";
+      inkPaint.beginPath();
+      // a tap with no travel still leaves a dot, not nothing
+      inkPaint.moveTo(from ? from.x : x, from ? from.y : y);
+      inkPaint.lineTo(x, y);
+      inkPaint.stroke();
+      pen.current = { x, y };
+    };
+
+    const scene = ctx.current;
+    scene.whiteboard = mesh;
+    scene.registry.set(mesh, "whiteboard");
+
+    scene.whiteboardPointer = (u, v, phase) => {
+      // canvas y runs down, UV runs up
+      const x = u * width;
+      const y = (1 - v) * height;
+      const tool = ctx.current.whiteboardTool;
+
+      if (tool.mode === "note") {
+        if (phase === "down") {
+          const found = noteAt(x, y);
+          if (found === null) {
+            // dropping a new one, already under the finger to be dragged
+            const fresh: Note = {
+              x,
+              y,
+              colour: tool.noteColour,
+              tilt: (Math.random() - 0.5) * 0.16,
+              text: "",
+            };
+            notes.push(fresh);
+            selected = fresh;
+            held = notes.length - 1;
+            grabX = 0;
+            grabY = 0;
+          } else {
+            // bring it to the front so overlapping notes pick up predictably
+            const [picked] = notes.splice(found, 1);
+            notes.push(picked);
+            selected = picked;
+            held = notes.length - 1;
+            grabX = x - picked.x;
+            grabY = y - picked.y;
+          }
+        } else if (phase === "move" && held !== null) {
+          notes[held].x = x - grabX;
+          notes[held].y = y - grabY;
+        } else if (phase === "up") {
+          held = null;
+        }
+        compose();
+        return selected ? selected.text : null;
+      }
+
+      // any other tool drops the selection, so the editor closes with it
+      if (selected) {
+        selected = null;
+        compose();
+      }
+
+      if (phase === "up") {
+        pen.current = null;
+        return null;
+      }
+      // Notes sit above the ink, so rubbing over one can't lift it — pressing
+      // on one with the eraser takes it off instead. Only on press, so a
+      // stroke that happens to pass over a note doesn't sweep it away.
+      if (tool.mode === "eraser" && phase === "down") {
+        const found = noteAt(x, y);
+        if (found !== null) {
+          if (notes[found] === selected) selected = null;
+          notes.splice(found, 1);
+          compose();
+          return null;
+        }
+      }
+      stroke(x, y, phase === "down");
+      compose();
+      return null;
+    };
+
+    // Wipes to bare board — the printed heading/bullets/stats and every note
+    // go too, so a visitor gets a genuinely empty surface rather than having
+    // to draw around his notes. They return with the texture on a theme change.
+    scene.whiteboardNoteText = (text) => {
+      if (!selected) return;
+      selected.text = text;
+      compose();
+    };
+
+    scene.whiteboardDeselect = () => {
+      if (!selected) return;
+      selected = null;
+      compose();
+    };
+
+    scene.whiteboardDeleteNote = () => {
+      if (!selected) return;
+      const at = notes.indexOf(selected);
+      if (at !== -1) notes.splice(at, 1);
+      selected = null;
+      // the splice shifts every index above it, so any drag in flight is void
+      held = null;
+      compose();
+    };
+
+    scene.whiteboardClear = () => {
+      pen.current = null;
+      held = null;
+      selected = null;
+      cleared = true;
+      notes = [];
+      inkPaint.clearRect(0, 0, width, height);
+      compose();
+    };
+
+    // the dashed selection ring is editing furniture, not part of the drawing
+    scene.whiteboardImage = () => {
+      const wasSelected = selected;
+      selected = null;
+      compose();
+      const png = display.toDataURL("image/png");
+      selected = wasSelected;
+      compose();
+      return png;
+    };
+
+    return () => {
+      scene.registry.delete(mesh);
+      scene.whiteboard = null;
+      scene.whiteboardPointer = null;
+      scene.whiteboardClear = null;
+      scene.whiteboardImage = null;
+      scene.whiteboardNoteText = null;
+      scene.whiteboardDeselect = null;
+      scene.whiteboardDeleteNote = null;
+    };
+  }, [ctx, t.paper, texture]);
+
   return (
-    <group position={[ROOM_X - 0.08, 2.0, 1.15]} rotation={[0, -Math.PI / 2, 0.004]}>
+    <group position={BOARD_ANCHOR} rotation={[0, -Math.PI / 2, 0.004]}>
       <mesh>
         <boxGeometry args={[2.2, 1.25, 0.06]} />
         <meshStandardMaterial color={t.trim} roughness={0.6} metalness={0.2} />
       </mesh>
-      <mesh position={[0, 0, 0.035]}>
-        <planeGeometry args={[2.06, 1.11]} />
+      <mesh ref={board} position={[0, 0, BOARD_FACE]}>
+        <planeGeometry args={[BOARD_SIZE[0], BOARD_SIZE[1]]} />
         <meshStandardMaterial map={texture} roughness={0.35} />
       </mesh>
       {[
@@ -1308,6 +1727,26 @@ export function laptopViewpoint(item: ExploreItem) {
     y: screen.y + 0.01,
     yaw: ry,
     pitch: -0.05,
+  };
+}
+
+/**
+ * Where the camera stands to draw on the board. Unlike the laptop's pose the
+ * distance is solved per camera rather than fixed: a portrait phone's narrow
+ * frustum has to stand much further back than a desktop's to fit the same
+ * 2.06m board on screen, and a cropped board is a board you can't draw on.
+ */
+function whiteboardViewpoint(camera: THREE.PerspectiveCamera) {
+  const halfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
+  const margin = 1.18;
+  const forHeight = ((BOARD_SIZE[1] / 2) * margin) / Math.tan(halfFov);
+  const forWidth = ((BOARD_SIZE[0] / 2) * margin) / (Math.tan(halfFov) * camera.aspect);
+  const distance = THREE.MathUtils.clamp(Math.max(forHeight, forWidth), 1.0, 3.1);
+  return {
+    pos: new THREE.Vector2(BOARD_ANCHOR[0] - BOARD_FACE - distance, BOARD_ANCHOR[2]),
+    y: BOARD_ANCHOR[1],
+    yaw: -Math.PI / 2,
+    pitch: 0,
   };
 }
 
@@ -1782,6 +2221,19 @@ export type PlayerHandle = {
   recentre: MutableRefObject<(() => void) | null>;
   /** walks the camera back into the laptop screen, then calls back */
   sitDown: MutableRefObject<((done: () => void) => void) | null>;
+  /** docks the camera square-on to the whiteboard and hands over the pointer */
+  standAtBoard: MutableRefObject<((done: () => void) => void) | null>;
+  /** undocks, back to wherever the player was standing before */
+  leaveBoard: MutableRefObject<(() => void) | null>;
+  clearBoard: MutableRefObject<(() => void) | null>;
+  boardImage: MutableRefObject<(() => string | null) | null>;
+  /** pushes the toolbar's current pen/eraser/note settings into the scene */
+  setBoardTool: MutableRefObject<((tool: BoardTool) => void) | null>;
+  /** writes the toolbar's text field into the selected sticky note */
+  setNoteText: MutableRefObject<((text: string) => void) | null>;
+  deselectNote: MutableRefObject<(() => void) | null>;
+  /** removes the selected sticky note */
+  deleteNote: MutableRefObject<(() => void) | null>;
 };
 
 type Pose = { pos: THREE.Vector2; y: number; yaw: number; pitch: number };
@@ -1802,10 +2254,14 @@ function Player({
   handle,
   onSelect,
   onMove,
+  onDrawStart,
+  onNoteSelect,
 }: {
   handle: PlayerHandle;
   onSelect: (id: string) => void;
   onMove: () => void;
+  onDrawStart: () => void;
+  onNoteSelect: (text: string | null) => void;
 }) {
   const { camera, gl } = useThree();
   const ctx = useContext(SceneCtx)!;
@@ -1822,6 +2278,10 @@ function Player({
   const still = useMemo(prefersReducedMotion, []);
   const cinematic = useRef<Cinematic | null>(null);
   const laptop = useMemo(() => exploreItems.find((i) => i.exitsToSite), []);
+  /** docked at the whiteboard: the pointer draws instead of steering */
+  const drawing = useRef(false);
+  const preDrawPose = useRef<Pose | null>(null);
+  const boardPose = useRef<Pose | null>(null);
 
   const clampTarget = (v: THREE.Vector2) => {
     v.x = THREE.MathUtils.clamp(v.x, -ROOM_X + 0.8, ROOM_X - 0.8);
@@ -1866,11 +2326,69 @@ function Player({
         onDone: done,
       };
     };
+    handle.standAtBoard.current = (done) => {
+      const here: Pose = {
+        pos: pos.current.clone(),
+        y: EYE_HEIGHT,
+        yaw: yaw.current,
+        pitch: pitch.current,
+      };
+      preDrawPose.current = here;
+      boardPose.current = whiteboardViewpoint(camera as THREE.PerspectiveCamera);
+      cinematic.current = {
+        from: here,
+        to: boardPose.current,
+        startedAt: now(),
+        duration: still ? 0.001 : 0.9,
+        // unlike sitDown the room keeps running afterwards, so the player's
+        // own pose has to land on the framed one or leaving would snap
+        release: true,
+        onDone: () => {
+          drawing.current = true;
+          done();
+        },
+      };
+    };
+
+    handle.leaveBoard.current = () => {
+      const back = preDrawPose.current;
+      const docked = boardPose.current;
+      // dropped first, so a stroke in flight can't land during the pull-back
+      drawing.current = false;
+      preDrawPose.current = null;
+      boardPose.current = null;
+      if (!back || !docked) return;
+      cinematic.current = {
+        from: docked,
+        to: back,
+        startedAt: now(),
+        duration: still ? 0.001 : 0.9,
+        release: true,
+      };
+    };
+
+    handle.clearBoard.current = () => ctx.current.whiteboardClear?.();
+    handle.boardImage.current = () => ctx.current.whiteboardImage?.() ?? null;
+    handle.setBoardTool.current = (tool) => {
+      ctx.current.whiteboardTool = tool;
+    };
+    handle.setNoteText.current = (text) => ctx.current.whiteboardNoteText?.(text);
+    handle.deselectNote.current = () => ctx.current.whiteboardDeselect?.();
+    handle.deleteNote.current = () => ctx.current.whiteboardDeleteNote?.();
+
     return () => {
       handle.recentre.current = null;
       handle.sitDown.current = null;
+      handle.standAtBoard.current = null;
+      handle.leaveBoard.current = null;
+      handle.clearBoard.current = null;
+      handle.boardImage.current = null;
+      handle.setBoardTool.current = null;
+      handle.setNoteText.current = null;
+      handle.deselectNote.current = null;
+      handle.deleteNote.current = null;
     };
-  }, [camera, handle, laptop, still]);
+  }, [camera, ctx, handle, laptop, still]);
 
   // Arriving in the room is standing up from that same laptop.
   useEffect(() => {
@@ -1893,8 +2411,42 @@ function Player({
     let moved = 0;
     let startedAt = 0;
 
+    // whether the pointer is currently on the board; leaving it lifts the pen
+    // (or drops a note) so coming back starts fresh rather than ruling a line
+    // across the gap
+    let onBoard = false;
+
+    /** Where a screen point lands on the board, in the board's own UV space. */
+    const boardHit = (clientX: number, clientY: number) => {
+      const board = ctx.current.whiteboard;
+      if (!board) return null;
+      const rect = el.getBoundingClientRect();
+      scratch.set(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(scratch, camera);
+      const hit = raycaster.intersectObject(board, false)[0];
+      return hit?.uv ?? null;
+    };
+
     const onDown = (e: PointerEvent) => {
       if (active !== null || cinematic.current) return;
+
+      if (drawing.current) {
+        const uv = boardHit(e.clientX, e.clientY);
+        // a press off the board is simply not a mark; it must not fall
+        // through to the look-drag, which is suspended while docked
+        if (!uv) return;
+        active = e.pointerId;
+        onBoard = true;
+        el.setPointerCapture(e.pointerId);
+        const note = ctx.current.whiteboardPointer?.(uv.x, uv.y, "down") ?? null;
+        onNoteSelect(note);
+        onDrawStart();
+        return;
+      }
+
       active = e.pointerId;
       lastX = e.clientX;
       lastY = e.clientY;
@@ -1905,6 +2457,21 @@ function Player({
 
     const onMovePointer = (e: PointerEvent) => {
       if (active !== e.pointerId) return;
+
+      if (drawing.current) {
+        const uv = boardHit(e.clientX, e.clientY);
+        if (!uv) {
+          // left the board mid-gesture: lift, and let re-entry start over
+          if (onBoard) ctx.current.whiteboardPointer?.(0, 0, "up");
+          onBoard = false;
+          return;
+        }
+        const note = ctx.current.whiteboardPointer?.(uv.x, uv.y, onBoard ? "move" : "down") ?? null;
+        if (!onBoard) onNoteSelect(note);
+        onBoard = true;
+        return;
+      }
+
       const dx = e.clientX - lastX;
       const dy = e.clientY - lastY;
       lastX = e.clientX;
@@ -1919,6 +2486,12 @@ function Player({
       const wasTap = moved < 12 && performance.now() - startedAt < 600;
       active = null;
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      // while docked a release just ends the mark — no tap-to-walk
+      if (drawing.current) {
+        ctx.current.whiteboardPointer?.(0, 0, "up");
+        onBoard = false;
+        return;
+      }
       if (wasTap) handleTap(e.clientX, e.clientY);
     };
 
@@ -1979,7 +2552,7 @@ function Player({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [camera, ctx, gl, onMove, onSelect, raycaster, scratch]);
+  }, [camera, ctx, gl, onDrawStart, onMove, onNoteSelect, onSelect, raycaster, scratch]);
 
   useFrame((state, delta) => {
     // a cinematic owns the camera outright while it runs
@@ -2006,6 +2579,10 @@ function Player({
       }
       return;
     }
+
+    // Docked at the board, the camera is simply held where the docking shot
+    // released it — WASD, tap-to-walk and the head bob all stand down.
+    if (drawing.current) return;
 
     const step = Math.min(delta, 0.05);
     const held = keys.current;
@@ -2054,24 +2631,39 @@ export function ExploreScene({
   handle,
   onSelect,
   onMove,
+  onDrawStart,
+  onNoteSelect,
   quality,
+  weather,
 }: {
   theme: ThemeName;
   handle: PlayerHandle;
   onSelect: (id: string) => void;
   onMove: () => void;
+  onDrawStart: () => void;
+  onNoteSelect: (text: string | null) => void;
   quality: Quality;
+  weather: Weather | null;
 }) {
   const refs = useRef<SceneRefs>({
     registry: new Map(),
     floor: null,
     marker: new THREE.Vector3(),
     markerAt: 0,
+    whiteboard: null,
+    whiteboardPointer: null,
+    whiteboardClear: null,
+    whiteboardImage: null,
+    whiteboardNoteText: null,
+    whiteboardDeselect: null,
+    whiteboardDeleteNote: null,
+    whiteboardTool: { ...DEFAULT_TOOL },
   });
   const t = themes[theme];
 
   return (
     <SceneCtx.Provider value={refs}>
+      <WeatherCtx.Provider value={weather}>
       <QualityCtx.Provider value={quality}>
         <Canvas
           dpr={quality === "mobile" ? [1, 1.25] : [1, 1.75]}
@@ -2105,9 +2697,16 @@ export function ExploreScene({
             <Exhibit key={item.id} item={item} theme={theme} />
           ))}
 
-          <Player handle={handle} onSelect={onSelect} onMove={onMove} />
+          <Player
+            handle={handle}
+            onSelect={onSelect}
+            onMove={onMove}
+            onDrawStart={onDrawStart}
+            onNoteSelect={onNoteSelect}
+          />
         </Canvas>
       </QualityCtx.Provider>
+      </WeatherCtx.Provider>
     </SceneCtx.Provider>
   );
 }

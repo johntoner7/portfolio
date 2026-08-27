@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
+    "dev:api": "set -a && . ./.env.local && set +a && vercel dev",
     "build": "vite build",
     "preview": "vite preview",
     "add-photo": "node scripts/add-photo.mjs",
@@ -25,12 +26,14 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.0",
     "recharts": "^3.8.1",
+    "resend": "^6.24.0",
     "three": "^0.169.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@vercel/node": "^9.0.1",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "cloudinary": "^2.10.0",
