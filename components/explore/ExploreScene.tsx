@@ -1031,6 +1031,56 @@ function OutsideView({ theme }: { theme: ThemeName }) {
   );
 }
 
+/*
+ * Beside the door, on the hinge side. The door spans x -1.43..-0.37 and the
+ * contact post sits at 0.15, so the clear wall is to the left of the frame.
+ */
+const SWITCH = { x: -1.75, y: 1.15, z: ROOM_Z - 0.02 };
+const SWITCH_TILT = 0.32;
+
+/** Wall switch by the door: it works the room's lights, i.e. the site theme. */
+function LightSwitch({ theme }: { theme: ThemeName }) {
+  const t = themes[theme];
+  const rocker = useRef<THREE.Mesh>(null);
+  const still = useMemo(prefersReducedMotion, []);
+  // light is up, dark is down — the way a switch you'd actually flick reads
+  const target = theme === "light" ? SWITCH_TILT : -SWITCH_TILT;
+
+  useFrame((_, delta) => {
+    const node = rocker.current;
+    if (!node) return;
+    if (still) {
+      node.rotation.x = target;
+      return;
+    }
+    // a flick, not a fade: fast enough to feel mechanical
+    node.rotation.x = THREE.MathUtils.damp(node.rotation.x, target, 18, delta);
+  });
+
+  return (
+    <Interactable id="lightswitch" position={[SWITCH.x, SWITCH.y, SWITCH.z]} rotation={Math.PI}>
+      {/* faceplate */}
+      <mesh>
+        <boxGeometry args={[0.086, 0.13, 0.012]} />
+        <meshStandardMaterial color={t.trim} roughness={0.55} />
+      </mesh>
+      {/* the rocker sits proud of the plate so its tilt is readable side-on */}
+      <mesh ref={rocker} position={[0, 0, 0.012]}>
+        <boxGeometry args={[0.05, 0.078, 0.018]} />
+        <meshStandardMaterial
+          color={theme === "light" ? "#f4efe4" : "#cfc7b7"}
+          roughness={0.4}
+          // a hint of glow in the dark, so it can be found at all
+          emissive={t.lamp}
+          emissiveIntensity={theme === "dark" ? 0.35 : 0}
+        />
+      </mesh>
+      <HitProxy size={[0.34, 0.36, 0.14]} />
+      <Label text="Lights" y={0.15} accent="#e8c46a" theme={theme} />
+    </Interactable>
+  );
+}
+
 /** The door you presumably came in through. */
 function Door({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
@@ -1068,6 +1118,15 @@ function Door({ theme }: { theme: ThemeName }) {
 const BOARD_ANCHOR = [ROOM_X - 0.08, 2.0, 1.15] as const;
 const BOARD_FACE = 0.035;
 const BOARD_SIZE = [2.06, 1.11] as const;
+/**
+ * The board's own surface colour, deliberately not `themes[].paper`. A real
+ * whiteboard does not change colour when the lights go on — the lighting does
+ * that, and the material already responds to it. Keeping it constant also
+ * means the texture is never rebuilt on a theme change, which used to throw
+ * away whatever a visitor had drawn.
+ */
+const BOARD_PAPER = "#fbf8f0";
+
 /** sticky note and its lettering, in board-canvas pixels */
 const NOTE_SIZE = 96;
 const NOTE_PAD = 9;
@@ -1087,9 +1146,9 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
         siteData.hero.focus.title,
         [...siteData.hero.focus.body],
         siteData.stats.map((stat) => ({ ...stat })),
-        t.paper,
+        BOARD_PAPER,
       ),
-    [t.paper],
+    [],
   );
 
   useEffect(() => () => texture.dispose(), [texture]);
@@ -1192,7 +1251,7 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
 
     const compose = () => {
       view.globalAlpha = 1;
-      view.fillStyle = t.paper;
+      view.fillStyle = BOARD_PAPER;
       view.fillRect(0, 0, width, height);
       if (!cleared) view.drawImage(printed, 0, 0);
       view.drawImage(ink, 0, 0);
@@ -1218,7 +1277,7 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
       // transparent, so it rubs out the printed heading/bullets underneath
       // as well as the visitor's own ink — rubbing a board takes off
       // whatever is under it, and Clear is there for wiping the lot.
-      inkPaint.strokeStyle = erasing ? t.paper : tool.colour;
+      inkPaint.strokeStyle = erasing ? BOARD_PAPER : tool.colour;
       inkPaint.lineWidth = erasing ? tool.width * 2.5 : tool.width;
       inkPaint.lineCap = "round";
       inkPaint.lineJoin = "round";
@@ -1359,7 +1418,7 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
       scene.whiteboardDeselect = null;
       scene.whiteboardDeleteNote = null;
     };
-  }, [ctx, t.paper, texture]);
+  }, [ctx, texture]);
 
   return (
     <group position={BOARD_ANCHOR} rotation={[0, -Math.PI / 2, 0.004]}>
@@ -2198,6 +2257,7 @@ function Room({ theme }: { theme: ThemeName }) {
       <Window theme={theme} />
       <Whiteboard theme={theme} />
       <WallClock theme={theme} />
+      <LightSwitch theme={theme} />
       <ModelBoundary>
         <Suspense fallback={null}>
           <Lamp theme={theme} />

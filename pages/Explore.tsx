@@ -228,6 +228,18 @@ export function Explore() {
         standAtBoard.current?.(() => setDrawingOpen(true));
         return;
       }
+      /*
+       * The wall switch works the room's lights, which is the site's own
+       * light/dark theme. Setting the class is enough on its own —
+       * `useThemeMode` watches it — and localStorage is what makes the
+       * choice stick across pages, matching the nav's toggle.
+       */
+      if (id === "lightswitch") {
+        const next = theme === "dark" ? "light" : "dark";
+        document.documentElement.classList.toggle("light", next === "light");
+        window.localStorage.setItem("theme", next);
+        return;
+      }
       const item = exploreItems.find((entry) => entry.id === id);
       // the laptop is the way back: sit down at it and the site comes up
       if (item?.exitsToSite) {
@@ -264,7 +276,7 @@ export function Explore() {
       }
       setSelectedId(id);
     },
-    [navigate],
+    [navigate, theme],
   );
 
   const leaveDrawing = useCallback(() => {

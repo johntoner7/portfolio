@@ -183,6 +183,25 @@ Captured 2026-08-21. Not yet implemented — just tracking so nothing gets lost.
       **Attribution outstanding** for all 7 files, per the plan's decision to
       defer it — `models.ts` carries the TODO.
 
+- [x] **Light switch** — a wall switch beside the door works the room's
+      lights, i.e. the site's light/dark theme. It sets the `light` class on
+      `documentElement` and writes `localStorage.theme`, the same two lines
+      the nav's toggle uses, so `useThemeMode`'s MutationObserver picks it
+      up and the choice carries across pages.
+      Placed at x -1.75, left of the frame: the door spans -1.43..-0.37 and
+      the contact post sits at 0.15, so the clear wall is on that side. The
+      rocker damps toward its angle rather than snapping (up for light, down
+      for dark), holds still under reduced-motion, and carries a little
+      emissive in the dark so it can be found at all.
+      **Fixed a latent bug this made easy to hit:** the whiteboard texture
+      was keyed on `themes[].paper`, so any theme change rebuilt it on a
+      fresh canvas and threw away whatever had been drawn. Previously that
+      needed an OS-level theme switch mid-draw; a switch on the wall makes
+      it a two-second accident. The board now uses its own constant
+      `BOARD_PAPER` — a real whiteboard doesn't change colour when the
+      lights go on, the lighting does that, and the material already
+      responds to it — so the texture is built once and drawings survive.
+
 ## Notes
 
 - Keep using the "measure real bounds before placing" workflow for any new
