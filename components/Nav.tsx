@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Moon, SunMedium, Menu, X } from "lucide-react";
+import { Moon, SunMedium, Menu, X, Box } from "lucide-react";
 import { siteData } from "@/lib/data";
 
 export function Nav() {
@@ -61,11 +61,22 @@ export function Nav() {
         {/* Desktop nav */}
         <div className="hidden sm:flex items-center gap-4">
           <nav aria-label="Primary" className="flex items-center gap-4 text-xs text-muted sm:gap-6 sm:text-sm">
-            {siteData.nav.links.map((link) => (
-              <a key={link.href} href={resolveHref(link.href)} className="hover:text-ink">
-                {link.label}
-              </a>
-            ))}
+            {siteData.nav.links.map((link) =>
+              link.feature ? (
+                <a
+                  key={link.href}
+                  href={resolveHref(link.href)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ocean/40 bg-ocean/10 px-3 py-1.5 font-medium text-ink transition-colors hover:border-ocean hover:bg-ocean/20"
+                >
+                  <Box className="h-3.5 w-3.5 text-ocean" aria-hidden />
+                  {link.label}
+                </a>
+              ) : (
+                <a key={link.href} href={resolveHref(link.href)} className="hover:text-ink">
+                  {link.label}
+                </a>
+              ),
+            )}
           </nav>
           <button
             type="button"
@@ -108,8 +119,13 @@ export function Nav() {
                 key={link.href}
                 href={resolveHref(link.href)}
                 onClick={() => setMenuOpen(false)}
-                className="py-2.5 text-sm text-muted hover:text-ink transition-colors"
+                className={
+                  link.feature
+                    ? "mt-1 inline-flex items-center gap-2 self-start rounded-full border border-ocean/40 bg-ocean/10 px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-ocean/20"
+                    : "py-2.5 text-sm text-muted hover:text-ink transition-colors"
+                }
               >
+                {link.feature && <Box className="h-4 w-4 text-ocean" aria-hidden />}
                 {link.label}
               </a>
             ))}

@@ -8,6 +8,8 @@
     "dev:api": "set -a && . ./.env.local && set +a && vercel dev",
     "build": "vite build",
     "preview": "vite preview",
+    "make-preview": "node scripts/make-preview.mjs",
+    "card-image": "node scripts/make-card-image.mjs",
     "add-photo": "node scripts/add-photo.mjs",
     "sync-photos": "node scripts/sync-photos.mjs",
     "bulk-upload": "node scripts/bulk-upload.mjs"

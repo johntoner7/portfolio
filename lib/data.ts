@@ -1,6 +1,13 @@
 export type NavLink = {
   label: string;
   href: string;
+  /**
+   * Renders as a pill rather than as plain text. The other links are either
+   * anchors down this page or a word that explains itself ("Photos"); the room
+   * is neither, so as plain text in that row it reads as another section and
+   * nobody can tell what clicking it does.
+   */
+  feature?: boolean;
 };
 
 export type SkillGroup = {
@@ -53,7 +60,9 @@ export const siteData = {
       { label: "Projects", href: "#projects" },
       { label: "Contact", href: "#contact" },
       { label: "Photos", href: "/photos" },
-      { label: "Explore", href: "/explore" },
+      // "Explore" named the action but not the destination. This one word is
+      // the difference between a mystery box and an invitation.
+      { label: "3D Room", href: "/explore", feature: true },
     ] satisfies NavLink[],
   },
   hero: {
@@ -124,6 +133,10 @@ export const siteData = {
         { label: "Live site", href: "https://climategapni.com" },
         { label: "GitHub", href: "https://github.com/johntoner7" },
       ],
+      preview: {
+        src: "/cards/ni-agricultural-emissions.jpg",
+        alt: "The scenario modeller: projected NI agriculture emissions to 2030 against the CCC target, with the remaining 883 kt gap shaded.",
+      },
     },
     {
       title: "NI River Phosphorus Tool",
@@ -136,6 +149,10 @@ export const siteData = {
         { label: "Live site", href: "https://rivers.climategapni.com" },
         { label: "GitHub", href: "https://github.com/johntoner7" },
       ],
+      preview: {
+        src: "/cards/lough-neagh-phosphorus-pipeline.jpg",
+        alt: "A map of Northern Ireland's rivers coloured by phosphorus level, from blue through orange to dark red.",
+      },
     },
     {
       title: "Unmarked",
@@ -148,6 +165,10 @@ export const siteData = {
         { label: "Live site", href: "https://unmarked.johntoner.com" },
         { label: "GitHub", href: "https://github.com/johntoner7" },
       ],
+      preview: {
+        src: "/cards/unmarked-goals-map.jpg",
+        alt: "A dark map of Europe with club badges pinned to each stadium, numbered by goals scored there.",
+      },
     },
     {
       title: "Pen2Paper Tutoring Website",
@@ -157,33 +178,22 @@ export const siteData = {
         "React and Tailwind site with Sanity CMS so the client can manage content without touching code. Contact form with email delivery via Resend.",
       stack: ["React", "TypeScript", "Sanity CMS", "Resend", "Vercel"],
       links: [{ label: "Live site", href: "https://pen2papertutoring.com" }],
+      preview: {
+        src: "/cards/pen2paper-tutoring.jpg",
+        alt: "The Pen2Paper homepage: the logo over a pink gradient, headed 'Private Personal Tutoring'.",
+      },
     },
     {
-      /*
-       * The explore room is listed as a project rather than as a nav
-       * destination on purpose: as a bare menu item next to About and Contact
-       * it is a mystery box, and a 3D room nobody opted into reads as a
-       * gimmick. Given a hook, a stack and a preview it reads as what it is,
-       * which is the largest piece of engineering on the site.
-       *
-       * NB it has no entry in `projectMeta` (components/explore/exploreItems),
-       * which is deliberate — the room does not contain a model of itself.
-       */
-      title: "Explore Room",
+      title: "My Room",
       slug: "explore-room",
-      hook: "A walkable 3D office where the things on the shelves are these projects.",
+      hook: "A 3D space to interact with my portfolio.",
       description:
-        "React Three Fiber over a hand-measured scene graph: every imported asset is placed from its own glTF bounds rather than by eye, and the room repaints itself between light and dark. The whiteboard is drawable and emails the sketch through a serverless function, the pinboard opens the photo gallery, and the window looks out on live Belfast weather rather than on the theme toggle.",
+        "React Three Fiber room that allows users to walk around and interact with my portfolio of projects.",
       stack: ["React Three Fiber", "three.js", "WebGL", "TypeScript", "Vercel Functions"],
       links: [
         { label: "Enter the room", href: "/explore" },
         { label: "GitHub", href: "https://github.com/johntoner7" },
       ],
-      preview: {
-        src: "/explore/room-preview.mp4",
-        poster: "/explore/room-preview.jpg",
-        alt: "The 3D office: a desk with a laptop under a window, a bookshelf, and a whiteboard on the right-hand wall.",
-      },
     },
   ] satisfies Project[],
   stats: [

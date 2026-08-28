@@ -5,7 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Portfolio website for John Toner, a full stack engineer building climate and environmental data tools." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href="https://johntoner.com/" />
     <title>John Toner</title>
+
+    <!--
+      Link previews. One set for the whole site: this is a single-page app, so
+      every route is served this same document and crawlers never see a
+      per-route <head>. og:image must be an absolute URL — a relative one is
+      ignored by every scraper — and it reuses a project card image rather than
+      having a source of its own: the phosphorus map is the most legible of
+      them at thumbnail size and matches what the description claims. 1280x720
+      rather than the canonical 1200x630, which every platform crops to fit.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="John Toner" />
+    <meta property="og:url" content="https://johntoner.com/" />
+    <meta property="og:title" content="John Toner — Software Engineer" />
+    <meta
+      property="og:description"
+      content="Full-stack engineer building climate and environmental data tools. Includes a walkable 3D office you can explore in the browser."
+    />
+    <meta property="og:image" content="https://johntoner.com/cards/lough-neagh-phosphorus-pipeline.jpg" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="720" />
+    <meta property="og:image:alt" content="A map of Northern Ireland's rivers coloured by phosphorus level, from blue through orange to dark red." />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="John Toner — Software Engineer" />
+    <meta
+      name="twitter:description"
+      content="Full-stack engineer building climate and environmental data tools. Includes a walkable 3D office you can explore in the browser."
+    />
+    <meta name="twitter:image" content="https://johntoner.com/cards/lough-neagh-phosphorus-pipeline.jpg" />
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -89,31 +89,34 @@ const projectMeta: Record<
 };
 
 /*
- * Only the projects with a placement in `projectMeta` become objects. The
- * fallbacks below used to be the safety net for that, but they are a poor one:
- * a project with no entry lands at [0, 1, 0] as a stack of worksheets, which
- * is head height in the middle of the floor. The explore room is itself listed
- * as a project now, and it is the case in point — the room does not contain a
- * model of itself, so it must not be placed at all.
+ * Only the projects with a placement in `projectMeta` become objects in the
+ * room. This used to be a `.map` with fallbacks, which was a poor safety net:
+ * an unplaced project landed at [0, 1, 0] as a stack of worksheets, head
+ * height in the middle of the floor. The explore room is itself listed as a
+ * project now and is the case in point — the room does not contain a model of
+ * itself, so it must not be placed at all. `flatMap` drops it instead, and
+ * lets the rest read `meta.x` rather than `meta?.x ?? guess`.
  */
-const projectItems: ExploreItem[] = projects
-  .filter((project) => projectMeta[project.slug])
-  .map((project) => {
+const projectItems: ExploreItem[] = projects.flatMap((project) => {
   const meta = projectMeta[project.slug];
-  return {
-    id: project.slug,
-    label: meta?.label ?? project.title,
-    title: project.title,
-    hook: project.hook,
-    body: [project.description],
-    chips: [...project.stack],
-    links: project.links.filter((l): l is { label: string; href: string } => Boolean(l.href)),
-    accent: meta?.accent ?? "#84a83c",
-    form: meta?.form ?? "worksheets",
-    position: meta?.position ?? [0, 1, 0],
-    rotation: meta?.rotation,
-    labelY: meta?.labelY ?? 0.5,
-  };
+  if (!meta) return [];
+
+  return [
+    {
+      id: project.slug,
+      label: meta.label,
+      title: project.title,
+      hook: project.hook,
+      body: [project.description],
+      chips: [...project.stack],
+      links: project.links.filter((l): l is { label: string; href: string } => Boolean(l.href)),
+      accent: meta.accent,
+      form: meta.form,
+      position: meta.position,
+      rotation: meta.rotation,
+      labelY: meta.labelY,
+    },
+  ];
 });
 
 const embedItem: ExploreItem[] = [

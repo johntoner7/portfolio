@@ -1,7 +1,70 @@
+import { useEffect, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
 
-import type { Project } from "@/lib/data";
+import type { Project, ProjectPreview } from "@/lib/data";
+
+/**
+ * Media at the head of a card, so nobody clicks a project blind.
+ *
+ * Two things it has to get right. A video here is decoration, not content, so
+ * it is muted, looped and inert, and under prefers-reduced-motion it degrades
+ * to its own poster rather than moving. And the whole block removes itself if
+ * the file is missing: a preview that half-loads looks worse than a card with
+ * no preview at all, which is also what lets the markup ship ahead of the
+ * asset.
+ */
+function CardPreview({ preview }: { preview: ProjectPreview }) {
+  const [failed, setFailed] = useState(false);
+  const [still, setStill] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => setStill(query.matches);
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, []);
+
+  if (failed) return null;
+
+  const isVideo = /\.(mp4|webm)$/.test(preview.src);
+  const src = isVideo && still ? preview.poster : preview.src;
+  if (!src) return null;
+
+  return (
+    <div className="relative -mx-6 -mt-6 mb-6 aspect-[16/9] overflow-hidden border-b border-divider bg-surface sm:-mx-7 sm:-mt-7">
+      {isVideo && !still ? (
+        <video
+          className="h-full w-full object-cover"
+          src={preview.src}
+          poster={preview.poster}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-label={preview.alt}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <img
+          className="h-full w-full object-cover"
+          src={src}
+          alt={preview.alt}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      )}
+      {/* ties the media into the card rather than letting it sit as a pasted rectangle */}
+      <span
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-page/70 to-transparent"
+        aria-hidden
+      />
+    </div>
+  );
+}
 
 export function ProjectCard({ project }: { project: Project }) {
   return (
@@ -14,6 +77,8 @@ export function ProjectCard({ project }: { project: Project }) {
         className="pointer-events-none absolute inset-x-0 top-0 h-[2px] origin-left scale-x-0 rounded-full bg-gradient-to-r from-ocean to-env transition-transform duration-500 ease-out group-hover:scale-x-100"
         aria-hidden
       />
+      {project.preview && <CardPreview preview={project.preview} />}
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-env">{project.slug.replace(/-/g, " ")}</p>
