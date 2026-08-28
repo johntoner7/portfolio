@@ -252,6 +252,24 @@ Captured 2026-08-21. Not yet implemented — just tracking so nothing gets lost.
       controls, ~690px, fits an 844px landscape phone) rather than two
       stacked rails, since every extra row comes straight off the board.
 
+- [x] **Colour wheel** — the four presets stay as the quick path; a fifth
+      chip (hue-sweep ring around the colour in use) opens a wheel for
+      anything else. Hue is the angle, saturation the radius, lightness its
+      own slider under it — a disc rather than a grid because the marker's
+      angle reads as "which colour" at a glance.
+      Applies to whichever colour the current mode owns: pen ink, or the
+      note colour in sticky-note mode. Recents are banked on *close*, not
+      on every change, so dragging across the wheel doesn't fill the row
+      with every shade passed through on the way.
+      `hexToHsl`/`hslToHex` verified to round-trip exactly on all four
+      presets plus the primaries, white, black and mid-grey (worst channel
+      error 0), with 3-digit hex expanded and unparseable input falling
+      back rather than producing NaN.
+      The disc is painted into `ImageData` once per lightness step at a
+      device-pixel ratio capped to 2 — a 3x backing store for a 176px disc
+      is a lot of pixels to repaint for no visible gain. On a short
+      viewport it drops to 132px so the popover still clears the rail.
+
 ## Notes
 
 - Keep using the "measure real bounds before placing" workflow for any new

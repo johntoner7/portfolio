@@ -15,6 +15,17 @@ export type ProjectLink = {
   href: string | null;
 };
 
+/**
+ * Optional media at the head of a project card. `src` may be a video or a
+ * still; a video is treated as decorative, so it plays muted and looped and
+ * falls back to `poster` under prefers-reduced-motion.
+ */
+export type ProjectPreview = {
+  src: string;
+  poster?: string;
+  alt: string;
+};
+
 export type Project = {
   title: string;
   slug: string;
@@ -22,6 +33,7 @@ export type Project = {
   description: string;
   stack: string[];
   links: ProjectLink[];
+  preview?: ProjectPreview;
 };
 
 export type DataStat = {
@@ -145,6 +157,33 @@ export const siteData = {
         "React and Tailwind site with Sanity CMS so the client can manage content without touching code. Contact form with email delivery via Resend.",
       stack: ["React", "TypeScript", "Sanity CMS", "Resend", "Vercel"],
       links: [{ label: "Live site", href: "https://pen2papertutoring.com" }],
+    },
+    {
+      /*
+       * The explore room is listed as a project rather than as a nav
+       * destination on purpose: as a bare menu item next to About and Contact
+       * it is a mystery box, and a 3D room nobody opted into reads as a
+       * gimmick. Given a hook, a stack and a preview it reads as what it is,
+       * which is the largest piece of engineering on the site.
+       *
+       * NB it has no entry in `projectMeta` (components/explore/exploreItems),
+       * which is deliberate — the room does not contain a model of itself.
+       */
+      title: "Explore Room",
+      slug: "explore-room",
+      hook: "A walkable 3D office where the things on the shelves are these projects.",
+      description:
+        "React Three Fiber over a hand-measured scene graph: every imported asset is placed from its own glTF bounds rather than by eye, and the room repaints itself between light and dark. The whiteboard is drawable and emails the sketch through a serverless function, the pinboard opens the photo gallery, and the window looks out on live Belfast weather rather than on the theme toggle.",
+      stack: ["React Three Fiber", "three.js", "WebGL", "TypeScript", "Vercel Functions"],
+      links: [
+        { label: "Enter the room", href: "/explore" },
+        { label: "GitHub", href: "https://github.com/johntoner7" },
+      ],
+      preview: {
+        src: "/explore/room-preview.mp4",
+        poster: "/explore/room-preview.jpg",
+        alt: "The 3D office: a desk with a laptop under a window, a bookshelf, and a whiteboard on the right-hand wall.",
+      },
     },
   ] satisfies Project[],
   stats: [

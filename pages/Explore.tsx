@@ -22,6 +22,7 @@ import { exploreItems } from "@/components/explore/exploreItems";
 import { ExplorePanel } from "@/components/explore/ExplorePanel";
 import { ExploreCredits } from "@/components/explore/ExploreCredits";
 import { PhotoScrapbook } from "@/components/photos/PhotoScrapbook";
+import { ColourWheel } from "@/components/explore/ColourWheel";
 import type { PlayerHandle } from "@/components/explore/ExploreScene";
 import {
   BOARD_INKS,
@@ -187,6 +188,9 @@ export function Explore() {
    */
   const [isTouch, setIsTouch] = useState(false);
   const [isShort, setIsShort] = useState(false);
+  const [wheelOpen, setWheelOpen] = useState(false);
+  // colours mixed on the wheel this session, so a shade can be picked twice
+  const [recentColours, setRecentColours] = useState<string[]>([]);
 
   useEffect(() => {
     const coarse = window.matchMedia("(pointer: coarse)");
@@ -356,6 +360,7 @@ export function Explore() {
     setHasDrawing(false);
     setSendStatus("idle");
     setSendOpen(false);
+    setWheelOpen(false);
     setSenderName("");
     setSenderNote("");
     setNoteDraft(null);
@@ -452,6 +457,28 @@ export function Explore() {
   /** which tool groups the current mode can actually use */
   const showColours = tool.mode !== "eraser";
   const showNibs = tool.mode !== "note";
+  /** the colour the wheel is currently editing, by mode */
+  const activeColour = tool.mode === "note" ? tool.noteColour : tool.colour;
+  const setActiveColour = useCallback(
+    (hex: string) => pickTool(tool.mode === "note" ? { noteColour: hex } : { colour: hex }),
+    [pickTool, tool.mode],
+  );
+  const presets: readonly string[] =
+    tool.mode === "note" ? BOARD_NOTE_COLOURS : BOARD_INKS;
+
+  /*
+   * Recents are banked on close rather than on every change, so dragging
+   * across the wheel doesn't fill the row with the shades passed through
+   * on the way to the one actually wanted.
+   */
+  const closeWheel = useCallback(() => {
+    setWheelOpen(false);
+    const hex = activeColour.toLowerCase();
+    if (presets.some((preset) => preset.toLowerCase() === hex)) return;
+    setRecentColours((current) =>
+      current.includes(hex) ? current : [hex, ...current].slice(0, 8),
+    );
+  }, [activeColour, presets]);
 
   const actionButtons = (
     <>
@@ -751,6 +778,74 @@ export function Explore() {
           </div>
         )}
 
+        {/* Colour wheel — mixes a shade outside the four presets */}
+        {wheelOpen && showColours && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+              padding: 14,
+              borderRadius: 16,
+              border: "1px solid rgb(var(--color-divider))",
+              background: "rgb(var(--color-surface) / 0.94)",
+              backdropFilter: "blur(10px)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            }}
+          >
+            <ColourWheel
+              value={activeColour}
+              onChange={setActiveColour}
+              size={isShort ? 132 : 176}
+            />
+
+            {recentColours.length > 0 && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" }}>
+                {recentColours.map((colour) => (
+                  <button
+                    key={colour}
+                    type="button"
+                    aria-label={`Reuse ${colour}`}
+                    onClick={() => setActiveColour(colour)}
+                    style={{
+                      height: 24,
+                      width: 24,
+                      padding: 0,
+                      borderRadius: 999,
+                      background: colour,
+                      cursor: "pointer",
+                      border:
+                        activeColour.toLowerCase() === colour.toLowerCase()
+                          ? "2px solid rgb(var(--color-ink))"
+                          : "1px solid rgb(var(--color-divider))",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+              <code
+                style={{
+                  fontSize: 12,
+                  color: "rgb(var(--color-muted))",
+                  fontFamily: "ui-monospace, monospace",
+                }}
+              >
+                {activeColour.toUpperCase()}
+              </code>
+              <button
+                type="button"
+                onClick={closeWheel}
+                style={{ ...actionStyle, marginLeft: "auto" }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Send form: the second, deliberate press that actually sends */}
         {sendOpen && (
           <div
@@ -926,6 +1021,43 @@ export function Explore() {
                   />
                 );
               })}
+              {/*
+                Opens the wheel. The ring is a hue sweep so it reads as
+                "more colours", with the colour actually in use in the
+                middle — otherwise a mixed shade has nothing showing it.
+              */}
+              <button
+                type="button"
+                aria-label="More colours"
+                aria-expanded={wheelOpen}
+                disabled={!showColours}
+                onClick={() => (wheelOpen ? closeWheel() : setWheelOpen(true))}
+                style={{
+                  height: isTouch ? 40 : 26,
+                  width: isTouch ? 40 : 26,
+                  padding: 0,
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  display: "grid",
+                  placeItems: "center",
+                  opacity: showColours ? 1 : 0.35,
+                  background:
+                    "conic-gradient(#e5484d, #e2a336, #e5c500, #46a758, #3aa9c9, #3e63dd, #8e4ec6, #e5484d)",
+                  border: wheelOpen
+                    ? "2px solid rgb(var(--color-ink))"
+                    : "1px solid rgb(var(--color-divider))",
+                }}
+              >
+                <span
+                  style={{
+                    height: isTouch ? 18 : 12,
+                    width: isTouch ? 18 : 12,
+                    borderRadius: 999,
+                    background: activeColour,
+                    border: "1.5px solid rgb(var(--color-surface))",
+                  }}
+                />
+              </button>
             </>
           )}
 

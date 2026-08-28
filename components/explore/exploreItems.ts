@@ -88,7 +88,17 @@ const projectMeta: Record<
   },
 };
 
-const projectItems: ExploreItem[] = projects.map((project) => {
+/*
+ * Only the projects with a placement in `projectMeta` become objects. The
+ * fallbacks below used to be the safety net for that, but they are a poor one:
+ * a project with no entry lands at [0, 1, 0] as a stack of worksheets, which
+ * is head height in the middle of the floor. The explore room is itself listed
+ * as a project now, and it is the case in point — the room does not contain a
+ * model of itself, so it must not be placed at all.
+ */
+const projectItems: ExploreItem[] = projects
+  .filter((project) => projectMeta[project.slug])
+  .map((project) => {
   const meta = projectMeta[project.slug];
   return {
     id: project.slug,
