@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
+  ChevronDown,
   ChevronUp,
   Compass,
   Download,
@@ -135,8 +136,9 @@ export function Explore() {
   const walking = useRef(false);
   const recentre = useRef<(() => void) | null>(null);
   const sitDown = useRef<((done: () => void) => void) | null>(null);
-  const standAtBoard = useRef<((done: () => void) => void) | null>(null);
+  const standAtBoard = useRef<((done: () => void, bandPx?: number) => void) | null>(null);
   const leaveBoard = useRef<(() => void) | null>(null);
+  const reframeBoard = useRef<((bandPx: number) => void) | null>(null);
   const clearBoard = useRef<(() => void) | null>(null);
   const boardImage = useRef<(() => string | null) | null>(null);
   const setBoardTool = useRef<((tool: BoardTool) => void) | null>(null);
@@ -150,6 +152,7 @@ export function Explore() {
       sitDown,
       standAtBoard,
       leaveBoard,
+      reframeBoard,
       clearBoard,
       boardImage,
       setBoardTool,
@@ -189,6 +192,28 @@ export function Explore() {
   const [isTouch, setIsTouch] = useState(false);
   const [isShort, setIsShort] = useState(false);
   const [wheelOpen, setWheelOpen] = useState(false);
+  /*
+   * Whether the tool rows are folded away, leaving only the actions. Touch
+   * only: sideways on a phone the viewport is ~390px tall and the rails eat a
+   * third of it, and the board is framed inside whatever is left — so folding
+   * them is worth real board rather than just tidiness. Starts open, because
+   * a first-time visitor has to see that there are tools at all.
+   */
+  const [toolsCollapsed, setToolsCollapsed] = useState(false);
+  /*
+   * The fold, mirrored so `toggleTools` can read it without a dep on it. The
+   * effect below is what keeps it honest when the fold stops being offered at
+   * all — a tablet crossing out of a coarse pointer resets to open.
+   */
+  const collapsedRef = useRef(false);
+  /*
+   * The toolbar element, so the board can be framed against its real height.
+   * It wraps — the tool rail alone is 891px of controls inside a 620px cap on
+   * a phone — and how many rows that comes to is not something the scene can
+   * work out from the viewport.
+   */
+  const toolbar = useRef<HTMLDivElement>(null);
+  const bandPx = () => toolbar.current?.offsetHeight ?? 0;
   // colours mixed on the wheel this session, so a shade can be picked twice
   const [recentColours, setRecentColours] = useState<string[]>([]);
 
@@ -300,7 +325,8 @@ export function Explore() {
         setPressed(false);
         setHasDrawing(false);
         setSendStatus("idle");
-        standAtBoard.current?.(() => setDrawingOpen(true));
+        // the fold survives leaving and coming back, so dock framed for it
+        standAtBoard.current?.(() => setDrawingOpen(true), bandPx());
         return;
       }
       /*
@@ -454,6 +480,33 @@ export function Explore() {
    */
   const oneRow = isShort;
   const iconOnly = isTouch || oneRow;
+  /*
+   * Folding is offered on touch only. On a desktop the rails cost a strip of a
+   * tall window and the pointer is precise, so hiding the tools behind a press
+   * would be worse than leaving them out.
+   */
+  const canCollapse = isTouch;
+  const toolsHidden = canCollapse && toolsCollapsed;
+  useEffect(() => {
+    collapsedRef.current = toolsHidden;
+  }, [toolsHidden]);
+  /*
+   * Reads the ref rather than state so the callback needs no deps, and does
+   * its work outside the updater — StrictMode calls updaters twice, and
+   * re-framing the board twice per press would fire two cinematics.
+   */
+  const toggleTools = useCallback(() => {
+    const next = !collapsedRef.current;
+    collapsedRef.current = next;
+    setToolsCollapsed(next);
+    // the wheel is a tool row too, and the tallest of them
+    if (next) setWheelOpen(false);
+    /*
+     * Measured on the next frame, once the fold has actually laid out —
+     * reading offsetHeight now would return the height being left behind.
+     */
+    requestAnimationFrame(() => reframeBoard.current?.(bandPx()));
+  }, []);
   /** which tool groups the current mode can actually use */
   const showColours = tool.mode !== "eraser";
   const showNibs = tool.mode !== "note";
@@ -479,6 +532,27 @@ export function Explore() {
       current.includes(hex) ? current : [hex, ...current].slice(0, 8),
     );
   }, [activeColour, presets]);
+
+  const ActiveToolIcon = { pen: Pencil, eraser: Eraser, note: StickyNote }[tool.mode];
+  /** the eraser has no colour of its own, so it stays neutral */
+  const activeToolTint = tool.mode === "eraser" ? "rgb(var(--color-muted))" : activeColour;
+
+  const foldButton = canCollapse && (
+    <button
+      type="button"
+      aria-label={toolsHidden ? "Show drawing tools" : "Hide drawing tools"}
+      aria-expanded={!toolsHidden}
+      onClick={toggleTools}
+      style={{ ...toolChip(false, isTouch), flexShrink: 0 }}
+    >
+      {toolsHidden ? (
+        /* the tool in use, so the folded rail still says what the marker does */
+        <ActiveToolIcon style={{ height: 16, width: 16, color: activeToolTint }} />
+      ) : (
+        <ChevronDown style={{ height: 16, width: 16 }} />
+      )}
+    </button>
+  );
 
   const actionButtons = (
     <>
@@ -733,6 +807,7 @@ export function Explore() {
         it, which a fixed offset could not do.
       */}
       <div
+        ref={toolbar}
         style={{
           position: "absolute",
           bottom: drawingOpen
@@ -779,7 +854,7 @@ export function Explore() {
         )}
 
         {/* Colour wheel — mixes a shade outside the four presets */}
-        {wheelOpen && showColours && (
+        {wheelOpen && showColours && !toolsHidden && (
           <div
             style={{
               display: "flex",
@@ -963,9 +1038,16 @@ export function Explore() {
           </div>
         )}
 
-        {/* Tools: what the marker does, then what colour, then how thick */}
+        {/*
+          Tools: what the marker does, then what colour, then how thick. On
+          touch the whole group folds away behind the chip at its head,
+          leaving the actions — which are the ones you cannot do without,
+          Done above all.
+        */}
         <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
-          {([
+          {foldButton}
+          {toolsHidden && <span style={railDivider} />}
+          {!toolsHidden && ([
             ["pen", Pencil, "Pen"],
             ["eraser", Eraser, "Eraser"],
             ["note", StickyNote, "Sticky note"],
@@ -988,7 +1070,7 @@ export function Explore() {
             desktop it stays dimmed, where holding the width steady is worth
             more than the room it costs.
           */}
-          {(showColours || !iconOnly) && (
+          {!toolsHidden && (showColours || !iconOnly) && (
             <>
               <span style={railDivider} />
               {(tool.mode === "note" ? BOARD_NOTE_COLOURS : BOARD_INKS).map((colour) => {
@@ -1061,7 +1143,7 @@ export function Explore() {
             </>
           )}
 
-          {(showNibs || !iconOnly) && (
+          {!toolsHidden && (showNibs || !iconOnly) && (
             <>
               <span style={railDivider} />
               {BOARD_NIBS.map((width) => (
@@ -1091,12 +1173,12 @@ export function Explore() {
               ))}
             </>
           )}
-          {oneRow && <span style={railDivider} />}
-          {oneRow && actionButtons}
+          {oneRow && !toolsHidden && <span style={railDivider} />}
+          {(oneRow || toolsHidden) && actionButtons}
         </div>
 
-        {/* Actions. Sideways on a phone they join the row above instead. */}
-        {!oneRow && (
+        {/* Actions. Sideways on a phone, or folded, they join the row above. */}
+        {!oneRow && !toolsHidden && (
           <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
             {actionButtons}
           </div>

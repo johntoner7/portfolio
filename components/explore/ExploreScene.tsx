@@ -1139,6 +1139,16 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
   const ctx = useContext(SceneCtx)!;
   const board = useRef<THREE.Mesh>(null);
   const pen = useRef<{ x: number; y: number } | null>(null);
+  /*
+   * Whether the board has been wiped. Held twice on purpose: the ref is what
+   * the compose loop reads, since it runs inside an effect that must not
+   * re-run (re-running it would rebuild the layers and lose the drawing), and
+   * the state is what the two sticky notes below render off. They are meshes
+   * rather than texture, so clearing the canvas never touched them — a wiped
+   * board kept two notes stuck to it that no tool could remove.
+   */
+  const clearedRef = useRef(false);
+  const [cleared, setCleared] = useState(false);
 
   const texture = useMemo(
     () =>
@@ -1183,7 +1193,6 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
 
     type Note = { x: number; y: number; colour: string; tilt: number; text: string };
 
-    let cleared = false;
     let notes: Note[] = [];
     let held: number | null = null;
     /** the note the toolbar's text field is currently writing into */
@@ -1253,7 +1262,7 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
       view.globalAlpha = 1;
       view.fillStyle = BOARD_PAPER;
       view.fillRect(0, 0, width, height);
-      if (!cleared) view.drawImage(printed, 0, 0);
+      if (!clearedRef.current) view.drawImage(printed, 0, 0);
       view.drawImage(ink, 0, 0);
       notes.forEach(drawNote);
       texture.needsUpdate = true;
@@ -1362,9 +1371,11 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
       return null;
     };
 
-    // Wipes to bare board — the printed heading/bullets/stats and every note
-    // go too, so a visitor gets a genuinely empty surface rather than having
-    // to draw around his notes. They return with the texture on a theme change.
+    // Wipes to bare board — the printed heading/bullets/stats, every note the
+    // visitor added and the two the board ships with all go, so what is left
+    // is a genuinely empty surface rather than something to draw around. The
+    // wipe lasts as long as the room does: the texture is memoised on [] so
+    // that a theme change cannot rebuild it under a drawing in progress.
     scene.whiteboardNoteText = (text) => {
       if (!selected) return;
       selected.text = text;
@@ -1391,7 +1402,8 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
       pen.current = null;
       held = null;
       selected = null;
-      cleared = true;
+      clearedRef.current = true;
+      setCleared(true);
       notes = [];
       inkPaint.clearRect(0, 0, width, height);
       compose();
@@ -1430,15 +1442,17 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
         <planeGeometry args={[BOARD_SIZE[0], BOARD_SIZE[1]]} />
         <meshStandardMaterial map={texture} roughness={0.35} />
       </mesh>
-      {[
-        { x: 0.79, y: -0.4, rot: 0.09, colour: "#e8d16a" },
-        { x: 0.6, y: -0.44, rot: -0.14, colour: "#e8a06a" },
-      ].map((note) => (
-        <mesh key={note.x} position={[note.x, note.y, 0.042]} rotation={[0, 0, note.rot]}>
-          <planeGeometry args={[0.16, 0.16]} />
-          <meshStandardMaterial color={note.colour} roughness={0.9} />
-        </mesh>
-      ))}
+      {/* the two the board ships with; a wipe takes them too */}
+      {!cleared &&
+        [
+          { x: 0.79, y: -0.4, rot: 0.09, colour: "#e8d16a" },
+          { x: 0.6, y: -0.44, rot: -0.14, colour: "#e8a06a" },
+        ].map((note) => (
+          <mesh key={note.x} position={[note.x, note.y, 0.042]} rotation={[0, 0, note.rot]}>
+            <planeGeometry args={[0.16, 0.16]} />
+            <meshStandardMaterial color={note.colour} roughness={0.9} />
+          </mesh>
+        ))}
       <mesh position={[0, -0.66, 0.06]}>
         <boxGeometry args={[2.2, 0.06, 0.12]} />
         <meshStandardMaterial color={t.beam} roughness={0.7} />
@@ -1830,16 +1844,25 @@ function whiteboardViewpoint(camera: THREE.PerspectiveCamera, reserved = 0) {
 }
 
 /**
- * Roughly what the whiteboard toolbar covers. A short viewport (a phone on
- * its side) gets the single icon-only row; anything taller gets the stacked
- * rails. Only used to keep the board clear of it, so an estimate is fine.
+ * The share of the viewport the whiteboard toolbar covers, so the board can be
+ * framed inside what is left.
+ *
+ * `bandPx` is measured off the toolbar rather than guessed at. It used to be a
+ * table keyed on viewport height — 74px for a short viewport, 152 otherwise —
+ * and the 74 was wrong: sideways on a phone the rail holds 891px of controls
+ * inside its own 620px cap, so it wraps to two rows and stands about 120 tall.
+ * The board was framed for a toolbar half the real size and the controls sat
+ * on top of it, which is the whole reason the thing felt cramped.
+ *
+ * The fallbacks below are only for the first frame, before layout has run.
  */
-const BOARD_UI_BAND = { short: 74, tall: 152 };
+const BOARD_UI_FALLBACK = { short: 120, tall: 152 };
 
-function reservedForUi(heightPx: number) {
-  if (!heightPx) return 0;
-  const band = heightPx < 540 ? BOARD_UI_BAND.short : BOARD_UI_BAND.tall;
-  return THREE.MathUtils.clamp(band / heightPx, 0, 0.4);
+function reservedForUi(viewportPx: number, bandPx = 0) {
+  if (!viewportPx) return 0;
+  const band =
+    bandPx > 0 ? bandPx : viewportPx < 540 ? BOARD_UI_FALLBACK.short : BOARD_UI_FALLBACK.tall;
+  return THREE.MathUtils.clamp(band / viewportPx, 0, 0.4);
 }
 
 /** Embeds: the laptop, open, with the tools running on it. */
@@ -2315,9 +2338,14 @@ export type PlayerHandle = {
   /** walks the camera back into the laptop screen, then calls back */
   sitDown: MutableRefObject<((done: () => void) => void) | null>;
   /** docks the camera square-on to the whiteboard and hands over the pointer */
-  standAtBoard: MutableRefObject<((done: () => void) => void) | null>;
+  standAtBoard: MutableRefObject<((done: () => void, bandPx?: number) => void) | null>;
   /** undocks, back to wherever the player was standing before */
   leaveBoard: MutableRefObject<(() => void) | null>;
+  /**
+   * Re-frames the docked board for a toolbar of `bandPx`, so the space a fold
+   * gives back becomes board rather than blank screen. A no-op unless docked.
+   */
+  reframeBoard: MutableRefObject<((bandPx: number) => void) | null>;
   clearBoard: MutableRefObject<(() => void) | null>;
   boardImage: MutableRefObject<(() => string | null) | null>;
   /** pushes the toolbar's current pen/eraser/note settings into the scene */
@@ -2421,7 +2449,7 @@ function Player({
         onDone: done,
       };
     };
-    handle.standAtBoard.current = (done) => {
+    handle.standAtBoard.current = (done, bandPx = 0) => {
       const here: Pose = {
         pos: pos.current.clone(),
         y: EYE_HEIGHT,
@@ -2431,7 +2459,7 @@ function Player({
       preDrawPose.current = here;
       boardPose.current = whiteboardViewpoint(
         camera as THREE.PerspectiveCamera,
-        reservedForUi(gl.domElement.clientHeight),
+        reservedForUi(gl.domElement.clientHeight, bandPx),
       );
       cinematic.current = {
         from: here,
@@ -2449,6 +2477,19 @@ function Player({
           done();
         },
       };
+    };
+
+    handle.reframeBoard.current = (bandPx) => {
+      const from = boardPose.current;
+      if (!drawing.current || !from) return;
+      const to = whiteboardViewpoint(
+        camera as THREE.PerspectiveCamera,
+        reservedForUi(gl.domElement.clientHeight, bandPx),
+      );
+      boardPose.current = to;
+      // shorter than the dock itself: this is an adjustment, not an arrival
+      cinematic.current = { from, to, startedAt: now(), duration: still ? 0.001 : 0.32, release: true };
+      eyeY.current = to.y;
     };
 
     handle.leaveBoard.current = () => {
@@ -2483,6 +2524,7 @@ function Player({
       handle.sitDown.current = null;
       handle.standAtBoard.current = null;
       handle.leaveBoard.current = null;
+      handle.reframeBoard.current = null;
       handle.clearBoard.current = null;
       handle.boardImage.current = null;
       handle.setBoardTool.current = null;
