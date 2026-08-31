@@ -213,7 +213,14 @@ export function Explore() {
    * work out from the viewport.
    */
   const toolbar = useRef<HTMLDivElement>(null);
-  const bandPx = () => toolbar.current?.offsetHeight ?? 0;
+  /*
+   * The gap the toolbar sits above the bottom, plus any keyboard inset. Held
+   * in a ref because `bandPx` is called from callbacks memoised on other
+   * things, which would otherwise close over the first render's values —
+   * before the media queries have even reported.
+   */
+  const bandExtra = useRef(16);
+  const bandPx = () => (toolbar.current?.offsetHeight ?? 0) + bandExtra.current;
   // colours mixed on the wheel this session, so a shade can be picked twice
   const [recentColours, setRecentColours] = useState<string[]>([]);
 
@@ -250,17 +257,29 @@ export function Explore() {
   const showRotateHint = drawingOpen && isMobile && isPortrait && !rotateHintDismissed;
 
   /*
-   * The toolbar is pinned to the bottom of a fixed container, which the
-   * on-screen keyboard does not move — so on a phone the note field would
-   * open underneath it. visualViewport is the only thing that reports the
-   * covered height; without it (older browsers) the inset stays 0 and the
-   * toolbar sits where it always did.
+   * How much of the bottom of the fixed container is not actually visible.
+   * `innerHeight - visualViewport.height` measures anything covering the page,
+   * which on a phone is two different things and the toolbar has to clear
+   * both: the on-screen keyboard when a field is open, and — in landscape on
+   * iOS — Safari's own chrome, which overlays the layout viewport that
+   * `position: fixed` resolves against. Without this the controls sit under
+   * the browser bar, where they are visible but every tap goes to Safari.
+   *
+   * The clamp is the important part. The two measurements desync across a
+   * rotation, where innerHeight can still be reporting the portrait height
+   * against a landscape visual viewport — an inset bigger than the screen,
+   * which would throw the toolbar off the top instead. Bounding it by what is
+   * left after the toolbar's own height keeps it on screen whatever is
+   * reported, rather than trusting the numbers.
    */
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
-    const measure = () =>
-      setKeyboardInset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+    const measure = () => {
+      const covered = window.innerHeight - viewport.height - viewport.offsetTop;
+      const room = viewport.height - (toolbar.current?.offsetHeight ?? 0) - 24;
+      setKeyboardInset(Math.min(Math.max(0, covered), Math.max(0, room)));
+    };
     measure();
     viewport.addEventListener("resize", measure);
     viewport.addEventListener("scroll", measure);
@@ -269,6 +288,7 @@ export function Explore() {
       viewport.removeEventListener("scroll", measure);
     };
   }, []);
+
   // Send opens a small form first, so the drawing only ever leaves the
   // browser on a second, deliberate press.
   const [sendOpen, setSendOpen] = useState(false);
@@ -485,6 +505,18 @@ export function Explore() {
    * tall window and the pointer is precise, so hiding the tools behind a press
    * would be worse than leaving them out.
    */
+  /*
+   * What the toolbar occupies along the bottom, for framing the board inside
+   * what is left. Its own height plus the gap it sits above — measuring the
+   * element alone would miss the gap, which is the larger of the two sideways.
+   * Not read off a rect because this is also called at dock time, while the
+   * toolbar is still parked off-screen and a rect would be meaningless.
+   */
+  const boardBottomGap = isShort ? 34 : 16;
+  useEffect(() => {
+    bandExtra.current = boardBottomGap + keyboardInset;
+  }, [boardBottomGap, keyboardInset]);
+
   const canCollapse = isTouch;
   const toolsHidden = canCollapse && toolsCollapsed;
   useEffect(() => {
@@ -810,8 +842,31 @@ export function Explore() {
         ref={toolbar}
         style={{
           position: "absolute",
+          /*
+           * Above the in-world labels, which are drei <Html> and so carry a
+           * z-index of their own (zIndexRange caps them at 20). The toolbar had
+           * none, and z-index: auto loses to any positive value whatever the
+           * DOM order — so a label near the bottom of the frame painted over
+           * the controls. Still under the detail panel at 40, which never
+           * shares the screen with drawing mode anyway.
+           */
+          zIndex: 30,
+          // parked off-screen when not drawing, but it stays mounted, so it
+          // must not be hit-testable from out there
+          pointerEvents: drawingOpen ? "auto" : "none",
+          /*
+           * 16px off the bottom is fine in portrait, where the page is already
+           * inset above the home indicator. Sideways it is not: the indicator
+           * runs along the bottom centre — right under this toolbar — and the
+           * system claims a band there for its own swipe, so taps inside it
+           * never reach the page. That reads exactly as a toolbar you can see
+           * and cannot press. `env(safe-area-inset-bottom)` does not save us
+           * because the viewport meta has no `viewport-fit=cover`, so it
+           * resolves to 0; the extra offset on a short viewport is what
+           * actually clears the band.
+           */
           bottom: drawingOpen
-            ? `calc(16px + env(safe-area-inset-bottom) + ${keyboardInset}px)`
+            ? `calc(${boardBottomGap}px + env(safe-area-inset-bottom) + ${keyboardInset}px)`
             : "-420px",
           left: "50%",
           transform: "translateX(-50%)",
