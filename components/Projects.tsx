@@ -83,10 +83,22 @@ export function Projects() {
   const projects = siteData.projects;
   const [activeIndex, setActiveIndex] = useState(0);
   const selectorRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectorContainerRef = useRef<HTMLDivElement | null>(null);
+  const hasSelectedProject = useRef(false);
   const activeProject = projects[activeIndex];
 
   useEffect(() => {
-    selectorRefs.current[activeIndex]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    if (!hasSelectedProject.current) {
+      hasSelectedProject.current = true;
+      return;
+    }
+
+    const container = selectorContainerRef.current;
+    const selectedButton = selectorRefs.current[activeIndex];
+    if (!container || !selectedButton) return;
+
+    const targetLeft = selectedButton.offsetLeft - (container.clientWidth - selectedButton.clientWidth) / 2;
+    container.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
   }, [activeIndex]);
 
   const move = (direction: -1 | 1) => {
@@ -103,6 +115,7 @@ export function Projects() {
 
       <div className="relative">
         <div
+          ref={selectorContainerRef}
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3 sm:grid sm:grid-cols-3 sm:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Projects"
           role="tablist"
