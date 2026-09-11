@@ -5,6 +5,7 @@ import { MotionSection } from "@/components/MotionSection";
 import { PhosphorusMapEmbed } from "@/components/PhosphorusMapEmbed";
 import { ScenarioModeller } from "@/components/ScenarioModeller";
 import { SectionHeader } from "@/components/SectionHeader";
+import { UnmarkedGoalMapEmbed } from "@/components/UnmarkedGoalMapEmbed";
 import { siteData, type Project } from "@/lib/data";
 
 const projectSignals: Record<string, { category: string; value: string; label: string }> = {
@@ -61,6 +62,7 @@ function ProjectDetails({ project }: { project: Project }) {
 function LiveProject({ project }: { project: Project }) {
   if (project.slug === "ni-agricultural-emissions") return <ScenarioModeller embedded />;
   if (project.slug === "lough-neagh-phosphorus-pipeline") return <PhosphorusMapEmbed embedded />;
+  if (project.slug === "unmarked-goals-map") return <UnmarkedGoalMapEmbed />;
 
   return (
     <div className="flex min-h-[360px] flex-col justify-between px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
