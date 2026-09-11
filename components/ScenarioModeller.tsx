@@ -31,27 +31,29 @@ const MAX_ENTERIC_KT = Math.round(
 const MAX_SLURRY_SOILS_KT = Math.round(0.8 * SLURRY_METHANE_KT * 0.4 + SOIL_FERTILISER_KT);
 const MAX_LAND_USE_KT = Math.round((10000 * PEATLAND_RATE) / 1000);
 
-export function ScenarioModeller() {
+export function ScenarioModeller({ embedded = false }: { embedded?: boolean }) {
   const { state, setters, calculations, applyPreset } = useScenarioCalculations();
 
   return (
-    <article className="rounded-[2rem] border border-divider bg-surface/70 p-6 shadow-glow sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">Scenario modeller</p>
-          <h3 className="pb-1 text-2xl text-ink sm:text-3xl">NI agriculture must cut 1,125 kt CO₂e to meet the 2030 Climate Act target.</h3>
-          <p className="text-sm leading-7 text-muted">Adjust the interventions. Watch the trajectory change.</p>
+    <article className={embedded ? "px-6 pb-6 pt-0 sm:px-8 sm:pb-8" : "rounded-[2rem] border border-divider bg-surface/70 p-6 shadow-glow sm:p-8"}>
+      {!embedded && (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">Scenario modeller</p>
+            <h3 className="pb-1 text-2xl text-ink sm:text-3xl">NI agriculture must cut 1,125 kt CO₂e to meet the 2030 Climate Act target.</h3>
+            <p className="text-sm leading-7 text-muted">Adjust the interventions. Watch the trajectory change.</p>
+          </div>
+          <a
+            href="https://climategapni.com"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-divider bg-page/70 px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-ocean hover:bg-ocean/10"
+          >
+            Live site
+            <ExternalLink className="h-4 w-4" />
+          </a>
         </div>
-        <a
-          href="https://climategapni.com"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-full border border-divider bg-page/70 px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-ocean hover:bg-ocean/10"
-        >
-          Live site
-          <ExternalLink className="h-4 w-4" />
-        </a>
-      </div>
+      )}
 
       <div className="mt-6 space-y-4">
         <ScenarioMetrics

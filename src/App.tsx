@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { About } from "@/components/About";
-import { EmbedsSection } from "@/components/EmbedsSection";
 import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
@@ -33,7 +32,6 @@ export function App() {
         <Hero />
         <About />
         <Projects />
-        <EmbedsSection />
         <Contact />
       </main>
       <Footer />

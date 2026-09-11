@@ -130,7 +130,7 @@ function Sparkline({ series }: { series: StationTimeSeries["series"] }) {
   );
 }
 
-export function PhosphorusMapEmbed() {
+export function PhosphorusMapEmbed({ embedded = false }: { embedded?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const resizeRef = useRef<ResizeObserver | null>(null);
@@ -475,26 +475,28 @@ export function PhosphorusMapEmbed() {
   }, [selectedSeries]);
 
   return (
-    <article className="rounded-[2rem] border border-divider bg-surface/70 p-6 shadow-glow sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">Phosphorus map</p>
-          <h3 className="pb-1 text-2xl text-ink sm:text-3xl">View river phosphorus data and farm census areas.</h3>
-          <p className="text-sm leading-7 text-muted">
-            A simplified version of the river project. Click a station to load its trend history and sparkline.
-          </p>
-        </div>
+    <article className={embedded ? "px-6 pb-6 pt-0 sm:px-8 sm:pb-8" : "rounded-[2rem] border border-divider bg-surface/70 p-6 shadow-glow sm:p-8"}>
+      {!embedded && (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">Phosphorus map</p>
+            <h3 className="pb-1 text-2xl text-ink sm:text-3xl">View river phosphorus data and farm census areas.</h3>
+            <p className="text-sm leading-7 text-muted">
+              A simplified version of the river project. Click a station to load its trend history and sparkline.
+            </p>
+          </div>
 
-        <a
-          href="https://rivers.climategapni.com"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 rounded-full border border-divider bg-page/70 px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-ocean hover:bg-ocean/10"
-        >
-          Live site
-          <ExternalLink className="h-4 w-4" />
-        </a>
-      </div>
+          <a
+            href="https://rivers.climategapni.com"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-divider bg-page/70 px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-ocean hover:bg-ocean/10"
+          >
+            Live site
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+      )}
 
       <div className="mt-6 rounded-2xl border border-divider bg-page/60 p-3">
         <div ref={containerRef} className="h-[440px] overflow-hidden rounded-xl" />

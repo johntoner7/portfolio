@@ -56,9 +56,7 @@ export const siteData = {
   },
   nav: {
     links: [
-      { label: "About", href: "#about" },
       { label: "Projects", href: "#projects" },
-      { label: "Contact", href: "#contact" },
       { label: "Photos", href: "/photos" },
       // "Explore" named the action but not the destination. This one word is
       // the difference between a mystery box and an invitation.
@@ -123,7 +121,7 @@ export const siteData = {
   },
   projects: [
     {
-      title: "Northern Ireland Agriculture Emissions Tool",
+      title: "Climate Gap NI",
       slug: "ni-agricultural-emissions",
       hook: "NI cut overall emissions 31.5% since 1990, but agriculture emissions increased.",
       description:
@@ -139,7 +137,7 @@ export const siteData = {
       },
     },
     {
-      title: "NI River Phosphorus Tool",
+      title: "NI Rivers Tool",
       slug: "lough-neagh-phosphorus-pipeline",
       hook: "Mapping river phosphorus data spanning 35 years across 1,200 monitoring stations.",
       description:
@@ -169,31 +167,6 @@ export const siteData = {
         src: "/cards/unmarked-goals-map.jpg",
         alt: "A dark map of Europe with club badges pinned to each stadium, numbered by goals scored there.",
       },
-    },
-    {
-      title: "Pen2Paper Tutoring Website",
-      slug: "pen2paper-tutoring",
-      hook: "Live client website, independently maintainable.",
-      description:
-        "React and Tailwind site with Sanity CMS so the client can manage content without touching code. Contact form with email delivery via Resend.",
-      stack: ["React", "TypeScript", "Sanity CMS", "Resend", "Vercel"],
-      links: [{ label: "Live site", href: "https://pen2papertutoring.com" }],
-      preview: {
-        src: "/cards/pen2paper-tutoring.jpg",
-        alt: "The Pen2Paper homepage: the logo over a pink gradient, headed 'Private Personal Tutoring'.",
-      },
-    },
-    {
-      title: "My Room",
-      slug: "explore-room",
-      hook: "A 3D space to interact with my portfolio.",
-      description:
-        "React Three Fiber room that allows users to walk around and interact with my portfolio of projects.",
-      stack: ["React Three Fiber", "three.js", "WebGL", "TypeScript", "Vercel Functions"],
-      links: [
-        { label: "Enter the room", href: "/explore" },
-        { label: "GitHub", href: "https://github.com/johntoner7" },
-      ],
     },
   ] satisfies Project[],
   stats: [
