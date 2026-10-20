@@ -15,19 +15,25 @@ export function About() {
   }, [selectedItem]);
 
   return (
-    <MotionSection id="about" className="rounded-3xl border border-divider bg-surface/70 p-6 shadow-glow sm:p-8" delay={0.08}>
-      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ocean">{siteData.about.title}</p>
-      <div className="mt-4 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-        <div className="space-y-4 text-base leading-7 text-muted sm:text-lg">
-          {siteData.about.body.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
+    <MotionSection id="about" className="border-t border-divider pt-10 sm:pt-14" delay={0.08}>
+      <p className="font-mono text-xs uppercase tracking-[0.2em] text-ocean">{siteData.about.title}</p>
+      <div className="mt-6 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+        <div className="space-y-5 text-base leading-7 text-muted sm:text-lg">
+          {siteData.about.body.map((paragraph, index) =>
+            index === 0 ? (
+              <p key={paragraph} className="font-display text-2xl leading-snug text-ink sm:text-3xl">
+                {paragraph}
+              </p>
+            ) : (
+              <p key={paragraph}>{paragraph}</p>
+            ),
+          )}
         </div>
 
         <div className="grid gap-4">
           {siteData.about.skills.map((group) => (
             <div key={group.title} className="rounded-lg border border-divider bg-page/60 p-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-ink">{group.title}</p>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-ink">{group.title}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {group.items.map((item) => (
                   <button
@@ -47,8 +53,8 @@ export function About() {
                 ))}
               </div>
               {selectedItem?.group === group.title && selectedNote && (
-                <div className="mt-4 rounded-lg border border-divider bg-surface px-4 py-3 text-sm leading-6 text-muted shadow-glow">
-                  <div className="text-xs font-semibold uppercase tracking-[0.24em] text-ocean">{selectedItem.item}</div>
+                <div className="mt-4 rounded-lg border border-divider bg-surface px-4 py-3 text-sm leading-6 text-muted">
+                  <div className="font-mono text-xs uppercase tracking-[0.2em] text-ocean">{selectedItem.item}</div>
                   <p className="mt-2 text-ink">{selectedNote}</p>
                 </div>
               )}

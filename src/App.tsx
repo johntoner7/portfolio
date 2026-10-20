@@ -19,7 +19,7 @@ export function App() {
   return (
     <div className="home-bg" style={{
       minHeight: "100vh",
-      background: "linear-gradient(180deg, rgba(255,255,255,0.28), transparent 20%), linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 96%, black 4%) 42%, color-mix(in srgb, var(--background) 92%, black 8%) 100%)",
+      background: "linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 96%, black 4%) 42%, color-mix(in srgb, var(--background) 92%, black 8%) 100%)",
     }}>
       <a
         href="#main-content"
@@ -28,7 +28,7 @@ export function App() {
         Skip to content
       </a>
       <Nav />
-      <main id="main-content" className="mx-auto flex w-full max-w-site flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <main id="main-content" className="mx-auto flex w-full max-w-site flex-col gap-16 px-4 py-10 sm:px-6 lg:gap-24 lg:px-8 lg:py-14">
         <Hero />
         <About />
         <Projects />

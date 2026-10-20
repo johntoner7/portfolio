@@ -21,15 +21,15 @@ function LinkedinIcon({ className }: { className?: string }) {
 
 export function Contact() {
   return (
-    <MotionSection id="contact" className="rounded-3xl border border-divider bg-surface/70 p-6 shadow-glow sm:p-8" delay={0.32}>
-      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-ocean">{siteData.contact.title}</p>
+    <MotionSection id="contact" className="rounded-3xl border border-divider bg-surface/70 p-6 sm:p-8" delay={0.32}>
+      <p className="font-mono text-xs uppercase tracking-[0.2em] text-ocean">{siteData.contact.title}</p>
       <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="space-y-4">
           <p className="max-w-2xl text-lg leading-8 text-muted sm:text-xl">{siteData.contact.copy}</p>
           <div className="flex flex-wrap gap-3">
             <a
               href={`mailto:${siteData.contact.email}`}
-              className="inline-flex items-center gap-2 rounded-full bg-ocean px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+              className="inline-flex items-center gap-2 rounded-full bg-ocean px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-ocean/85"
             >
               <Mail className="h-4 w-4" />
               Email

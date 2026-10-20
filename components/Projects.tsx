@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, ArrowUpRight, ExternalLink } from "lucide-react";
 
+import { CountUp } from "@/components/CountUp";
 import { MotionSection } from "@/components/MotionSection";
 import { PhosphorusMapEmbed } from "@/components/PhosphorusMapEmbed";
 import { ScenarioModeller } from "@/components/ScenarioModeller";
@@ -41,7 +43,7 @@ function ProjectDetails({ project }: { project: Project }) {
   return (
     <div className="flex flex-col justify-between gap-8 px-6 pb-2 pt-6 sm:px-8 sm:pb-3 sm:pt-8">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-env">{project.slug.replace(/-/g, " ")}</p>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-env">{project.slug.replace(/-/g, " ")}</p>
         <h3 className="mt-3 text-3xl text-ink sm:text-4xl">{project.title}</h3>
         <p className="mt-5 text-lg leading-8 text-ocean">{project.hook}</p>
         <p className="mt-4 text-base leading-7 text-muted">{project.description}</p>
@@ -67,7 +69,7 @@ function LiveProject({ project }: { project: Project }) {
   return (
     <div className="flex min-h-[360px] flex-col justify-between px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-env">Live project</p>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-env">Live project</p>
         <p className="mt-5 max-w-xl text-3xl leading-tight text-ink sm:text-4xl">
           Explore the full experience on the live site.
         </p>
@@ -106,7 +108,7 @@ export function Projects() {
   };
 
   return (
-    <MotionSection id="projects" className="space-y-6" delay={0.16}>
+    <MotionSection id="projects" className="space-y-6 border-t border-divider pt-10 sm:pt-14" delay={0.16}>
       <SectionHeader
         eyebrow="Projects"
         title="Live tools I have built."
@@ -131,23 +133,24 @@ export function Projects() {
               onClick={() => setActiveIndex(index)}
               className={`min-w-[min(78vw,300px)] snap-start rounded-2xl border px-5 py-4 text-left transition-colors sm:min-w-0 sm:w-full ${
                 activeIndex === index
-                  ? "border-ocean bg-ocean/10 text-ink shadow-glow"
+                  ? "border-ocean bg-ocean/10 text-ink"
                   : "border-divider bg-surface/50 text-muted hover:border-ocean/60 hover:text-ink"
               }`}
             >
-              <span className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-env">
+              <span className="flex items-center justify-between gap-3 font-mono text-xs uppercase tracking-[0.2em] text-env">
                 <span>{projectSignals[project.slug].category}</span>
                 <span className="text-muted/70">0{index + 1}</span>
               </span>
-              <span className="mt-4 block text-3xl leading-none text-ink">{projectSignals[project.slug].value}</span>
-              <span className="mt-2 block text-xs uppercase tracking-[0.16em] text-muted">{projectSignals[project.slug].label}</span>
+              <span className="mt-4 block font-mono text-3xl leading-none text-ink">
+                <CountUp value={projectSignals[project.slug].value} />
+              </span>
+              <span className="mt-2 block font-mono text-xs uppercase tracking-[0.12em] text-muted">{projectSignals[project.slug].label}</span>
               <span className="mt-4 block text-lg leading-tight text-ink">{project.title}</span>
             </button>
           ))}
         </div>
 
-        <div className="mt-1 flex items-center justify-between gap-4">
-          <p className="text-sm text-muted" aria-live="polite">{activeIndex + 1} of {projects.length}</p>
+        <div className="mt-1 flex items-center justify-end gap-4">
           <div className="flex gap-2">
             <button
               type="button"
@@ -173,13 +176,21 @@ export function Projects() {
         id={`project-panel-${activeProject.slug}`}
         role="tabpanel"
         aria-label={activeProject.title}
-        className="overflow-hidden rounded-[2rem] border border-divider bg-surface/70 shadow-glow"
+        className="overflow-hidden rounded-[2rem] border border-divider bg-surface/70"
       >
-        <ProjectDetails project={activeProject} />
-        <LiveProject key={activeProject.slug} project={activeProject} />
-        <div className="px-6 pb-6 sm:px-8 sm:pb-8">
-          <ProjectLinks project={activeProject} />
-        </div>
+        {/* keyed by project so switching fades the new one in rather than swapping it instantly */}
+        <motion.div
+          key={activeProject.slug}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <ProjectDetails project={activeProject} />
+          <LiveProject project={activeProject} />
+          <div className="px-6 pb-6 sm:px-8 sm:pb-8">
+            <ProjectLinks project={activeProject} />
+          </div>
+        </motion.div>
       </div>
     </MotionSection>
   );

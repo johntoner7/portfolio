@@ -15,7 +15,18 @@
   --color-ink: 240 237 230;
   --color-muted: 168 162 150;
   --color-divider: 54 48 40;
+  /* hero river network: the live map's phosphorus breaks, lifted for a dark page */
+  --river-low: #38bdf8;
+  --river-mid: #f59e0b;
+  --river-high: #ef4444;
+  /* hero farm wards, cattle per ha: the live map's greens, run dark to bright
+     because its darkest step (the densest wards) would vanish into this page */
+  --farm-sparse: rgb(20 83 45 / 0.18);
+  --farm-low: rgb(21 128 61 / 0.32);
+  --farm-mid: rgb(34 197 94 / 0.42);
+  --farm-high: rgb(187 247 208 / 0.6);
 }
+
 
 html.light {
   color-scheme: light;
@@ -28,6 +39,14 @@ html.light {
   --color-ink: 28 25 20;
   --color-muted: 96 89 78;
   --color-divider: 214 206 190;
+  --river-low: #0284c7;
+  --river-mid: #d97706;
+  --river-high: #b91c1c;
+  /* the live map's ramp as-is */
+  --farm-sparse: rgb(248 250 252 / 0.7);
+  --farm-low: rgb(187 247 208 / 0.7);
+  --farm-mid: rgb(22 101 52 / 0.5);
+  --farm-high: rgb(5 46 22 / 0.55);
 }
 
 html {
@@ -74,7 +93,7 @@ body {
   transform-origin: center center;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.18;
+  opacity: 0.1;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cg fill='none' stroke='%2394a3b8' stroke-width='1.2'%3E%3Cellipse cx='300' cy='300' rx='280' ry='140'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='112'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='86'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='62'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='42'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='26'/%3E%3Cellipse cx='300' cy='300' rx='40' ry='14'/%3E%3Cellipse cx='300' cy='300' rx='280' ry='200' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='160' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='122' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='88' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='58' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='34' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='260' ry='170' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='220' ry='130' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='180' ry='96' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='140' ry='68' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='100' ry='44' transform='rotate(60 300 300)'/%3E%3C/g%3E%3C/svg%3E");
   background-size: 600px 600px;
   background-position: center;
@@ -101,8 +120,30 @@ body {
 }
 
 html.light .home-bg::before {
-  opacity: 0.1;
+  opacity: 0.07;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cg fill='none' stroke='%230f172a' stroke-width='1'%3E%3Cellipse cx='300' cy='300' rx='280' ry='140'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='112'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='86'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='62'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='42'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='26'/%3E%3Cellipse cx='300' cy='300' rx='40' ry='14'/%3E%3Cellipse cx='300' cy='300' rx='280' ry='200' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='160' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='122' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='88' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='58' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='34' transform='rotate(30 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='260' ry='170' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='220' ry='130' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='180' ry='96' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='140' ry='68' transform='rotate(60 300 300)'/%3E%3Cellipse cx='300' cy='300' rx='100' ry='44' transform='rotate(60 300 300)'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* A faint, static film grain over the homepage, so flat fills read as a
+   surface rather than a screen. One small tiled SVG; nothing animates. */
+.home-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+html.light .home-bg::after {
+  opacity: 0.035;
+}
+
+/* Nav links are plain anchors, so moving between pages (into the 3D room, say)
+   is a full navigation; browsers that support it cross-fade instead of flashing. */
+@view-transition {
+  navigation: auto;
 }
 
 #root {
@@ -240,3 +281,21 @@ html.light .home-bg::before {
   }
 }
 
+/* Hero river network spreads out from Lough Neagh. The mask circle scales
+   about its own centre, which fill-box makes the circle's, not the SVG's. */
+.river-reveal {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: river-reveal 2.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+@keyframes river-reveal {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .river-reveal {
+    animation: none;
+  }
+}
