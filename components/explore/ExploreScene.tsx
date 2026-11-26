@@ -15,7 +15,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { ArrowDown } from "lucide-react";
 import * as THREE from "three";
-import { darkWoodPalette, lightWoodPalette, makeWoodTextures } from "@/utils/woodTexture";
+import { darkWoodPalette, makeWoodTextures } from "@/utils/woodTexture";
 import { makeCeilingTextures } from "./ceilingTexture";
 import { makeWhiteboardTexture } from "./whiteboardTexture";
 import { makeCloudTexture } from "./cloudTexture";
@@ -27,16 +27,29 @@ import { siteData } from "@/lib/data";
 import { exploreItems, type ExploreItem } from "./exploreItems";
 import { getCloudinaryUrl } from "@/utils/cloudinary";
 import { photosByRecency, type Photo } from "./photoSelection";
+import { coverAt300, lifeSnapshot, wordOfTheDay } from "@/lib/lifeSnapshot";
+import {
+  BOARD,
+  COUCH_Z,
+  DESK,
+  DOOR_X,
+  RECORD_CABINET,
+  ROOM_X,
+  ROOM_Z,
+  SHELF,
+  SHELF_UNIT_X,
+  TRAINERS,
+  WALL_GAP,
+  WALL_HEIGHT,
+  WINDOW,
+} from "./roomLayout";
 
-const ROOM_X = 3.2; // half width — the room is narrower than it is deep
-const ROOM_Z = 3.4; // half depth
-const WALL_HEIGHT = 3.4;
 const EYE_HEIGHT = 1.6;
-const START = new THREE.Vector2(0, 2.2);
+/** a step in from the door, looking across at the desk under the window */
+const START = new THREE.Vector2(0.4, ROOM_Z - 1.05);
 const WALK_SPEED = 2.6;
 const LABEL_RANGE = 4.5;
 
-const DESK = { x: -0.9, z: -ROOM_Z + 0.57, top: 0.74 };
 
 /*
  * Imported-asset scaling. Every number below is measured from the glTF itself
@@ -47,15 +60,18 @@ const DESK = { x: -0.9, z: -ROOM_Z + 0.57, top: 0.74 };
  *              y 0.032 / 0.289 / 0.546 / 0.804 / 1.062
  *   books      0.197 x 0.156 x 0.125, centred at x +0.080, z -0.015
  */
-const DESK_SCALE = DESK.top / 0.433;
-const DESK_OFFSET: [number, number, number] = [-0.32 * DESK_SCALE, 0, -0.006 * DESK_SCALE];
+/*
+ * Scaled to the desk's footprint rather than uniformly: at a uniform 1.71 the
+ * model is 2.14 x 1.06, too big for a desk under a 1.3m window in a small
+ * room. Height still comes from the 0.74 top.
+ */
+const DESK_SCALE: [number, number, number] = [DESK.width / 1.25, DESK.top / 0.433, DESK.depth / 0.622];
+const DESK_OFFSET: [number, number, number] = [-0.32 * DESK_SCALE[0], 0, -0.006 * DESK_SCALE[2]];
 const CHAIR_SCALE = 0.53;
 const CHAIR_OFFSET: [number, number, number] = [0, 0, 0.032 * CHAIR_SCALE];
 /** z is stretched hard: the shelf model is only 0.154 deep, too shallow to hold a football */
 const SHELF_SCALE: [number, number, number] = [1.5, 1.5, 2.2];
 const SHELF_TOPS = [0.032, 0.289, 0.546, 0.804, 1.062].map((y) => y * SHELF_SCALE[1]);
-/** two matching units side by side, since one is only 0.86m wide */
-const SHELF_UNIT_X = 0.435;
 /**
  * The Poly Pizza furniture shares one palette atlas. These are the swatches
  * each model samples, so repainting them recolours the furniture — and lets it
@@ -81,11 +97,6 @@ const BOOKS_OFFSET: [number, number, number] = [-0.08 * BOOKS_SCALE, 0, 0.015 * 
  * a material and read as a mitred joint; two coplanar faces z-fight.
  */
 const CORNER_INSET = 0.1;
-/**
- * The shelf stands clear of the skirting rather than inside it: its back panel
- * reaches x = SHELF.x - 0.18, which must stay in front of the skirting face.
- */
-const SHELF = { x: -ROOM_X + 0.3, z: -0.4 };
 /*
  * The door asset, measured with node transforms applied: frame 1.594 wide x
  * 3.081 tall x 0.320 deep, sitting on y 0.015 and centred at x -0.0145. Leaf,
@@ -113,18 +124,29 @@ const DOOR_SINK = 0.004;
  * Node translations are in metres, applied before DOOR_SCALE.
  */
 const DOOR_HANDLE_RAW_Y = (1.0 + DOOR_SINK) / DOOR_SCALE + DOOR_RAW.footY;
-/** width drives the break in the skirting, so it tracks the real frame */
-const DOOR = { x: -0.9, width: DOOR_RAW.width * DOOR_SCALE };
-/** the back wall carries an actual cut-out here, with real 3D scenery beyond it */
-const WINDOW = { x: 1.65, y: 1.85, w: 2.0, h: 1.7 };
+/** measured from the real frame */
+const DOOR = { x: DOOR_X, width: DOOR_RAW.width * DOOR_SCALE };
 
 type Quality = "mobile" | "desktop";
 
 /** Furniture the player shouldn't walk through: [x, z, radius] */
 const PROP_OBSTACLES: [number, number, number][] = [
-  [DESK.x, DESK.z, 1.5],
-  [SHELF.x, SHELF.z, 0.95],
-  [2.3, 2.35, 0.6],
+  // the desk and its chair, as two circles along its length
+  [DESK.x - 0.45, DESK.z + 0.25, 0.75],
+  [DESK.x + 0.45, DESK.z + 0.25, 0.75],
+  [SHELF.x, SHELF.z - 0.45, 0.6],
+  [SHELF.x, SHELF.z + 0.45, 0.6],
+  // the couch along the right wall, as three circles down its length
+  [ROOM_X - 0.45, COUCH_Z - 0.7, 0.6],
+  [ROOM_X - 0.45, COUCH_Z, 0.6],
+  [ROOM_X - 0.45, COUCH_Z + 0.7, 0.6],
+  // the reading lamp at the couch's end
+  [ROOM_X - 0.26, COUCH_Z + 1.3, 0.3],
+  // the record cabinet against the door wall
+  [RECORD_CABINET.x - 0.3, ROOM_Z - 0.3, 0.42],
+  [RECORD_CABINET.x + 0.3, ROOM_Z - 0.3, 0.42],
+  // the trainers by the door
+  [TRAINERS.x, TRAINERS.z, 0.3],
 ];
 
 const themes = {
@@ -151,28 +173,33 @@ const themes = {
     labelInk: "#f0ede6",
     wood: darkWoodPalette,
   },
+  /*
+   * Lights on. The room is the same room, so it keeps the dark palette's
+   * surfaces and materials: only the light changes — brighter fill, a
+   * stronger ceiling lamp, daylight through the window, and the haze outside.
+   */
   light: {
-    wall: "#e7e0d2",
-    trim: "#cfc4ad",
-    ceiling: "#f6f2ea",
-    beam: "#b9a985",
+    wall: "#241f18",
+    trim: "#3a3226",
+    ceiling: "#221d15",
+    beam: "#3c3226",
     fog: "#f2efe9",
     lamp: "#fff4dd",
-    rug: "#ded2ba",
-    rugMotif: "#9a8460",
-    rugAccent: "#b5734a",
-    paper: "#fffdf7",
-    cork: "#c39a67",
-    leaf: "#5d8a45",
-    pane: "#e4eef9",
+    rug: "#2c2419",
+    rugMotif: "#6d5b3c",
+    rugAccent: "#a8794a",
+    paper: "#e8e2d4",
+    cork: "#7a5c3a",
+    leaf: "#4a6b3a",
+    pane: "#2b3d55",
     daylight: "#eef4fd",
-    ambient: 0.9,
-    hemi: 0.5,
-    key: 1.0,
-    lampIntensity: 4.5,
-    labelBg: "rgba(255,253,248,0.86)",
-    labelInk: "#1c1914",
-    wood: lightWoodPalette,
+    ambient: 1.6,
+    hemi: 0.9,
+    key: 1.4,
+    lampIntensity: 12,
+    labelBg: "rgba(20,18,13,0.82)",
+    labelInk: "#f0ede6",
+    wood: darkWoodPalette,
   },
 } as const;
 
@@ -200,6 +227,8 @@ type SceneRefs = {
   whiteboardDeleteNote: (() => void) | null;
   /** live settings, written by the toolbar and read mid-stroke */
   whiteboardTool: BoardTool;
+  /** standing at the board drawing, when its arrow would sit on the drawing */
+  boardDocked: boolean;
 };
 
 
@@ -273,57 +302,21 @@ function Interactable({
   );
 }
 
-/** Floating DOM label that fades in as the player gets close. */
-function Label({ text, y, accent, theme }: { text: string; y: number; accent: string; theme: ThemeName }) {
-  const el = useRef<HTMLDivElement>(null);
-  const anchor = useRef<THREE.Group>(null);
-  const world = useMemo(() => new THREE.Vector3(), []);
-  const t = themes[theme];
-
-  useFrame(({ camera }) => {
-    if (!el.current || !anchor.current) return;
-    anchor.current.getWorldPosition(world);
-    const dist = world.distanceTo(camera.position);
-    el.current.style.opacity = String(THREE.MathUtils.clamp((LABEL_RANGE - dist) / 2, 0, 1));
-  });
-
-  return (
-    <group ref={anchor} position={[0, y, 0]}>
-      <Html center distanceFactor={7} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
-        <div
-          ref={el}
-          style={{
-            opacity: 0,
-            transition: "opacity 120ms linear",
-            whiteSpace: "nowrap",
-            fontFamily: "var(--font-dm-sans), sans-serif",
-            // one size for both: Html scales with distance, so a bigger font on
-            // mobile does not aid legibility, it just makes the label loom
-            // larger against the object it belongs to
-            fontSize: 12,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            color: t.labelInk,
-            background: t.labelBg,
-            border: `1px solid ${accent}`,
-            borderRadius: 999,
-            padding: "6px 14px",
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          {text}
-        </div>
-      </Html>
-    </group>
-  );
-}
-
 /**
  * A small non-interactive icon anchored to the object itself, hinting that
  * it's clickable. Purely a visual cue — clicks are still resolved by the
  * raycaster in Player, so this never intercepts pointer events.
  */
-function ClickHint({ accent, theme }: { accent: string; theme: ThemeName }) {
+function ClickHint({
+  accent,
+  theme,
+  hidden,
+}: {
+  accent: string;
+  theme: ThemeName;
+  /** checked every frame; while it returns true the arrow stays hidden */
+  hidden?: () => boolean;
+}) {
   const el = useRef<HTMLDivElement>(null);
   const anchor = useRef<THREE.Group>(null);
   const world = useMemo(() => new THREE.Vector3(), []);
@@ -333,7 +326,8 @@ function ClickHint({ accent, theme }: { accent: string; theme: ThemeName }) {
     if (!el.current || !anchor.current) return;
     anchor.current.getWorldPosition(world);
     const dist = world.distanceTo(camera.position);
-    el.current.style.opacity = String(THREE.MathUtils.clamp((LABEL_RANGE - dist) / 2, 0, 1));
+    const shown = hidden?.() ? 0 : THREE.MathUtils.clamp((LABEL_RANGE - dist) / 2, 0, 1);
+    el.current.style.opacity = String(shown);
   });
 
   return (
@@ -430,64 +424,109 @@ function Lamp({ theme }: { theme: ThemeName }) {
 }
 
 /*
- * Poly Pizza "Holiday lights" (Poly by Google, CC-BY 3.0). Measured from the
- * glTF: 2888058 long on z, meandering 501924 across x, near-flat on y — so it
- * is modelled lying down, the wire lazily snaking through about two full
- * waves with bulbs poking out alternately to either side.
- *
- * Standing that plane upright (rotating about the run) is what makes it read
- * as a real strand: the model's own meander becomes a two-swag droop and the
- * bulbs alternate up and down, so nothing here has to fake a sag.
+ * A string of warm-white bulbs along the top of the left wall, hung in even
+ * swags between pins just under the cornice. Built rather than imported: the
+ * old model's own random meander read as a tangle once it was on a wall.
  */
-const FAIRY_LENGTH = 2888057.75; // raw z extent
-const FAIRY_SCALE = 3.2 / FAIRY_LENGTH;
-const FAIRY_OFFSET: [number, number, number] = [
-  -715316.125 * FAIRY_SCALE,
-  -157916.703125 * FAIRY_SCALE,
-  1569587.625 * FAIRY_SCALE,
-];
+const FAIRY = {
+  x: -ROOM_X + 0.035,
+  // just under the cornice, which takes the top 0.14 of the wall
+  top: WALL_HEIGHT - 0.2,
+  from: -ROOM_Z + 0.3,
+  to: ROOM_Z - 0.3,
+  swags: 4,
+  sag: 0.16,
+  bulbSpacing: 0.18,
+};
+
+/** height of the wire at z: a shallow parabola between each pair of pins */
+function fairyY(z: number) {
+  const span = (FAIRY.to - FAIRY.from) / FAIRY.swags;
+  const t = (((z - FAIRY.from) / span) % 1 + 1) % 1;
+  return FAIRY.top - FAIRY.sag * 4 * t * (1 - t);
+}
 
 function FairyLights({ theme }: { theme: ThemeName }) {
-  const strand = useModel("fairylights");
   const still = useMemo(prefersReducedMotion, []);
+  const bulbs = useRef<THREE.InstancedMesh>(null);
 
-  /*
-   * Only the `Cylinder` nodes are bulbs — they carry the five bright
-   * `NN___Default` materials (green, red, amber, cyan, purple). The wire and
-   * the little end caps share a near-black material and must not glow, so
-   * they are filtered out by name. useModel clones materials per mesh, so
-   * bulbs sharing a colour still get separate instances to twinkle.
-   */
-  const bulbMaterials = useMemo(() => {
-    const found: THREE.MeshStandardMaterial[] = [];
-    strand.traverse((node) => {
-      const mesh = node as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      mats.forEach((m) => {
-        const mat = m as THREE.MeshStandardMaterial;
-        if (!mat?.name?.endsWith("___Default")) return;
-        mat.emissive = mat.color.clone();
-        found.push(mat);
-      });
+  const { wire, points } = useMemo(() => {
+    const samples: THREE.Vector3[] = [];
+    const steps = FAIRY.swags * 24;
+    for (let i = 0; i <= steps; i++) {
+      const z = FAIRY.from + ((FAIRY.to - FAIRY.from) * i) / steps;
+      samples.push(new THREE.Vector3(FAIRY.x, fairyY(z), z));
+    }
+    const curve = new THREE.CatmullRomCurve3(samples);
+    const length = curve.getLength();
+    const count = Math.floor(length / FAIRY.bulbSpacing);
+    // evenly along the wire, each hanging a hair below it
+    const at = Array.from({ length: count }, (_, i) =>
+      curve.getPointAt((i + 0.5) / count).add(new THREE.Vector3(0.006, -0.018, 0)),
+    );
+    return { wire: new THREE.TubeGeometry(curve, steps, 0.0035, 5, false), points: at };
+  }, []);
+
+  useEffect(() => () => wire.dispose(), [wire]);
+
+  const glow = useMemo(() => new THREE.Color(theme === "dark" ? "#ffc864" : "#f6dfaa"), [theme]);
+  const scratch = useMemo(() => new THREE.Color(), []);
+
+  useEffect(() => {
+    const mesh = bulbs.current;
+    if (!mesh) return;
+    const matrix = new THREE.Matrix4();
+    points.forEach((p, i) => {
+      matrix.makeTranslation(p.x, p.y, p.z);
+      mesh.setMatrixAt(i, matrix);
+      mesh.setColorAt(i, glow);
     });
-    return found;
-  }, [strand]);
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [points, glow]);
 
   useFrame((state) => {
-    const base = theme === "dark" ? 0.9 : 0.12;
-    const twinkle = theme === "dark" && !still ? 0.3 : 0;
-    bulbMaterials.forEach((m, i) => {
-      m.emissiveIntensity = Math.max(0, base + twinkle * Math.sin(state.clock.elapsedTime * 2 + i * 1.7));
-    });
+    const mesh = bulbs.current;
+    if (!mesh || still || theme !== "dark") return;
+    // a slow, uneven shimmer: each bulb on its own phase
+    const t = state.clock.elapsedTime;
+    for (let i = 0; i < points.length; i++) {
+      const level = 0.78 + 0.22 * Math.sin(t * 1.6 + i * 2.3) * Math.sin(t * 0.7 + i);
+      mesh.setColorAt(i, scratch.copy(glow).multiplyScalar(level));
+    }
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
   return (
-    // Upright against the left wall, strung above the bookshelf and the two
-    // project frames. Measured clear on every side: 0.07 off the wall, 0.13
-    // under the cornice, 0.45 above the frame tops.
-    <group position={[-ROOM_X + 0.1, 2.85, -0.2]} rotation={[0, 0, Math.PI / 2]}>
-      <primitive object={strand} scale={FAIRY_SCALE} position={FAIRY_OFFSET} />
+    <group>
+      <mesh geometry={wire}>
+        <meshStandardMaterial color="#2a2620" roughness={0.6} />
+      </mesh>
+      {/* the pins the swags hang from */}
+      {Array.from({ length: FAIRY.swags + 1 }, (_, i) => {
+        const z = FAIRY.from + ((FAIRY.to - FAIRY.from) * i) / FAIRY.swags;
+        return (
+          <mesh key={i} position={[FAIRY.x - 0.01, FAIRY.top + 0.006, z]}>
+            <sphereGeometry args={[0.008, 8, 6]} />
+            <meshStandardMaterial color="#8d8f94" metalness={0.6} roughness={0.35} />
+          </mesh>
+        );
+      })}
+      {/* unlit, so the bulbs read as lit in either theme */}
+      {/*
+        not culled: the bounding sphere is worked out from the bare geometry at
+        the origin before the bulbs are spread along the wire, so culling would
+        hide the lot whenever the origin is off screen
+      */}
+      <instancedMesh
+        ref={bulbs}
+        args={[undefined, undefined, points.length]}
+        key={points.length}
+        frustumCulled={false}
+      >
+        <sphereGeometry args={[0.019, 10, 8]} />
+        <meshBasicMaterial toneMapped={false} />
+      </instancedMesh>
     </group>
   );
 }
@@ -544,9 +583,9 @@ function Window({ theme }: { theme: ThemeName }) {
           depthWrite={false}
         />
       </mesh>
-      {[-1.02, 1.02].map((x) => (
+      {[-(WINDOW.w / 2 + 0.02), WINDOW.w / 2 + 0.02].map((x) => (
         <mesh key={x} position={[x, 0, 0]}>
-          <boxGeometry args={[0.12, 1.94, 0.14]} />
+          <boxGeometry args={[0.12, WINDOW.h + 0.24, 0.14]} />
           <meshStandardMaterial color={t.trim} roughness={0.8} />
         </mesh>
       ))}
@@ -555,25 +594,25 @@ function Window({ theme }: { theme: ThemeName }) {
         edge of the wall by 20mm. The jambs already overlap by 40mm; matching
         that here keeps a hairline from opening up along the opening's edge.
       */}
-      {[-0.91, 0.91].map((y) => (
+      {[-(WINDOW.h / 2 + 0.06), WINDOW.h / 2 + 0.06].map((y) => (
         <mesh key={y} position={[0, y, 0]}>
-          <boxGeometry args={[2.16, 0.16, 0.14]} />
+          <boxGeometry args={[WINDOW.w + 0.16, 0.16, 0.14]} />
           <meshStandardMaterial color={t.trim} roughness={0.8} />
         </mesh>
       ))}
-      {[-0.33, 0.33].map((x) => (
+      {[-WINDOW.w / 6, WINDOW.w / 6].map((x) => (
         <mesh key={x} position={[x, 0, 0]}>
-          <boxGeometry args={[0.05, 1.76, 0.08]} />
+          <boxGeometry args={[0.05, WINDOW.h + 0.06, 0.08]} />
           <meshStandardMaterial color={t.trim} roughness={0.8} />
         </mesh>
       ))}
       <mesh>
-        <boxGeometry args={[2.0, 0.05, 0.08]} />
+        <boxGeometry args={[WINDOW.w, 0.05, 0.08]} />
         <meshStandardMaterial color={t.trim} roughness={0.8} />
       </mesh>
       {/* sill */}
-      <mesh position={[0, -0.98, 0.08]}>
-        <boxGeometry args={[2.3, 0.08, 0.3]} />
+      <mesh position={[0, -(WINDOW.h / 2 + 0.135), 0.075]}>
+        <boxGeometry args={[WINDOW.w + 0.2, 0.045, 0.15]} />
         <meshStandardMaterial color={t.trim} roughness={0.85} />
       </mesh>
       {/* overcast outside takes a little off the light coming in */}
@@ -714,7 +753,8 @@ const BUILDINGS: { x: number; kind: 0 | 1 | 2; lift: number }[] = (() => {
  * something you walk to the window to see, and what carries the view from
  * further back is what stands tall — the rooftops and the sky.
  */
-const STOREY = WALL_HEIGHT;
+/** floor to floor: the room's 2.6m ceiling plus the floor above it */
+const STOREY = 3.0;
 /** the ground sits a hair below the road tiles rather than flush with them:
  *  coincident surfaces z-fight, overlapping ones do not */
 const GROUND_Y = -0.01;
@@ -1032,10 +1072,10 @@ function OutsideView({ theme }: { theme: ThemeName }) {
 }
 
 /*
- * Beside the door, on the hinge side. The door spans x -1.43..-0.37 and the
- * contact post sits at 0.15, so the clear wall is to the left of the frame.
+ * Beside the door, just left of its frame (which starts at x 0.74), above the
+ * end of the record cabinet.
  */
-const SWITCH = { x: -1.75, y: 1.15, z: ROOM_Z - 0.02 };
+const SWITCH = { x: DOOR_X - 0.66, y: 1.15, z: ROOM_Z - 0.02 };
 const SWITCH_TILT = 0.32;
 
 /** Wall switch by the door: it works the room's lights, i.e. the site theme. */
@@ -1076,7 +1116,7 @@ function LightSwitch({ theme }: { theme: ThemeName }) {
         />
       </mesh>
       <HitProxy size={[0.34, 0.36, 0.14]} />
-      <Label text="Lights" y={0.15} accent="#e8c46a" theme={theme} />
+      <ClickHint accent="#e8c46a" theme={theme} />
     </Interactable>
   );
 }
@@ -1085,12 +1125,30 @@ function LightSwitch({ theme }: { theme: ThemeName }) {
 function Door({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
   const model = useModel("door", {
-    materials: { Wood: t.beam, Metal: "#9a9086", Glass: t.pane },
+    materials: { Wood: t.beam, Metal: "#9a9086", Glass: t.beam },
   });
 
   const door = useMemo(() => {
     const handle = model.getObjectByName("DoorHandle");
     if (handle) handle.position.y = DOOR_HANDLE_RAW_Y;
+    /*
+     * A glazed panel reads as a front door, out to the street. This is the
+     * door to the landing, so the glass becomes a solid wooden panel.
+     */
+    model.traverse((node) => {
+      const mesh = node as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).forEach((m) => {
+        if (m.name !== "Glass") return;
+        const panel = m as THREE.MeshStandardMaterial;
+        panel.transparent = false;
+        panel.opacity = 1;
+        panel.depthWrite = true;
+        panel.metalness = 0;
+        panel.roughness = 0.75;
+        panel.needsUpdate = true;
+      });
+    });
     return model;
   }, [model]);
 
@@ -1111,11 +1169,11 @@ function Door({ theme }: { theme: ThemeName }) {
 
 /**
  * Whiteboard geometry, shared with the camera so "standing at the board"
- * frames the drawing surface exactly. It hangs on the +X wall facing in, so
+ * frames the drawing surface exactly. It hangs on the -X wall facing in, so
  * its own +Z (and the local offset that lifts the plane off the backing
- * board) points back along -X.
+ * board) points along +X.
  */
-const BOARD_ANCHOR = [ROOM_X - 0.08, 2.0, 1.15] as const;
+const BOARD_ANCHOR = [-ROOM_X + 0.08, BOARD.y, BOARD.z] as const;
 const BOARD_FACE = 0.035;
 const BOARD_SIZE = [2.06, 1.11] as const;
 /**
@@ -1433,7 +1491,7 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
   }, [ctx, texture]);
 
   return (
-    <group position={BOARD_ANCHOR} rotation={[0, -Math.PI / 2, 0.004]}>
+    <group position={BOARD_ANCHOR} rotation={[0, Math.PI / 2, 0.004]}>
       <mesh>
         <boxGeometry args={[2.2, 1.25, 0.06]} />
         <meshStandardMaterial color={t.trim} roughness={0.6} metalness={0.2} />
@@ -1457,6 +1515,7 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
         <boxGeometry args={[2.2, 0.06, 0.12]} />
         <meshStandardMaterial color={t.beam} roughness={0.7} />
       </mesh>
+      <ClickHint accent="#4f7fb8" theme={theme} hidden={() => ctx.current.boardDocked} />
       {/* marker left in the tray */}
       <mesh position={[-0.6, -0.62, 0.11]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.018, 0.018, 0.13, 8]} />
@@ -1467,6 +1526,14 @@ function Whiteboard({ theme }: { theme: ThemeName }) {
 }
 
 /** Wall clock, hands on the real time — the one thing in here that is true. */
+const belfastClock = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/London",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Clicking it says what it's showing: Belfast's time, like the weather outside. */
 function WallClock({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
   const hour = useRef<THREE.Group>(null);
@@ -1478,15 +1545,20 @@ function WallClock({ theme }: { theme: ThemeName }) {
     // sub-second precision, so the hand reflects the true instant rather than
     // holding the previous whole second for up to 1s (read as "running behind")
     const secs = now.getSeconds() + now.getMilliseconds() / 1000;
-    const mins = now.getMinutes() + secs / 60;
-    const hours = (now.getHours() % 12) + mins / 60;
+    // Belfast time, wherever the visitor is: the room is in Belfast, and so is
+    // the weather out of the window
+    const [h, m] = belfastClock.format(now).split(":").map(Number);
+    const mins = m + secs / 60;
+    const hours = (h % 12) + mins / 60;
     if (second.current) second.current.rotation.z = -(secs / 60) * Math.PI * 2;
     if (minute.current) minute.current.rotation.z = -(mins / 60) * Math.PI * 2;
     if (hour.current) hour.current.rotation.z = -(hours / 12) * Math.PI * 2;
   });
 
   return (
-    <group position={[1.25, 2.3, ROOM_Z - 0.09]} rotation={[0, Math.PI, 0]}>
+    <Interactable id="clock" position={[RECORD_CABINET.x, 1.85, ROOM_Z - 0.09]} rotation={Math.PI}>
+      <HitProxy size={[0.56, 0.56, 0.12]} />
+      <ClickHint accent="#c9a63e" theme={theme} />
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.24, 0.24, 0.06, 28]} />
         <meshStandardMaterial color={t.beam} roughness={0.7} />
@@ -1530,7 +1602,7 @@ function WallClock({ theme }: { theme: ThemeName }) {
         <cylinderGeometry args={[0.014, 0.014, 0.01, 12]} />
         <meshStandardMaterial color="#2b2620" roughness={0.4} metalness={0.5} />
       </mesh>
-    </group>
+    </Interactable>
   );
 }
 
@@ -1556,10 +1628,10 @@ const PLANT_OFFSET: [number, number, number] = [-0.045 * PLANT_SCALE, 0, -0.024 
     "football",
     "journal",
     "rug",
+    "couch",
     "worksheets",
     "envelopes",
     "ceilinglight",
-    "fairylights",
     "door",
     "roadStraight",
     "carBlue",
@@ -1571,7 +1643,17 @@ const PLANT_OFFSET: [number, number, number] = [-0.045 * PLANT_SCALE, 0, -0.024 
   ] as const
 ).forEach(preloadModel);
 
-function Plant({ theme, position }: { theme: ThemeName; position: [number, number, number] }) {
+function Plant({
+  theme,
+  position,
+  scale = 1,
+  rotation = 0,
+}: {
+  theme: ThemeName;
+  position: [number, number, number];
+  scale?: number;
+  rotation?: number;
+}) {
   const t = themes[theme];
   // recolour the baked materials so the plant follows the room's palette
   const model = useModel("plant", {
@@ -1579,8 +1661,163 @@ function Plant({ theme, position }: { theme: ThemeName; position: [number, numbe
   });
 
   return (
-    <group position={position}>
+    <group position={position} scale={scale} rotation={[0, rotation, 0]}>
       <primitive object={model} scale={PLANT_SCALE} position={PLANT_OFFSET} />
+    </group>
+  );
+}
+
+/* -------------------------------------------------------------- lounge ---- */
+
+/*
+ * couch-large.glb, measured with node transforms applied: 5.40 x 2.10 x 2.00
+ * (w x h x d), centred on x, depth from z -0.70 to +1.30, seat facing +z.
+ */
+const COUCH_SCALE = 2.1 / 5.4;
+const COUCH_DEPTH = 2.0 * COUCH_SCALE;
+const COUCH = { x: ROOM_X - WALL_GAP - COUCH_DEPTH / 2, z: COUCH_Z };
+
+const sofa = {
+  dark: { body: "#3e4a40", seat: "#4b5a4d" },
+  light: { body: "#7c8c78", seat: "#8e9e89" },
+} as const;
+
+/** Wood-topped box on four square legs: the coffee table, the sideboard and the bench share it. */
+function Cabinet({
+  size,
+  top,
+  body,
+  legs,
+  legHeight,
+  doors = 0,
+}: {
+  size: [number, number, number];
+  top: string;
+  body: string;
+  legs: string;
+  legHeight: number;
+  /** door fronts across the face; 0 leaves it an open table or bench */
+  doors?: number;
+}) {
+  const [w, h, d] = size;
+  const bodyH = h - legHeight;
+  const inset = 0.05;
+  return (
+    <group>
+      {[-1, 1].flatMap((sx) =>
+        [-1, 1].map((sz) => (
+          <mesh key={`${sx}${sz}`} position={[sx * (w / 2 - inset), legHeight / 2, sz * (d / 2 - inset)]}>
+            <boxGeometry args={[0.035, legHeight, 0.035]} />
+            <meshStandardMaterial color={legs} roughness={0.6} />
+          </mesh>
+        )),
+      )}
+      {doors > 0 ? (
+        <>
+          <mesh position={[0, legHeight + bodyH / 2 - 0.0125, 0]}>
+            <boxGeometry args={[w, bodyH - 0.025, d]} />
+            <meshStandardMaterial color={body} roughness={0.8} />
+          </mesh>
+          {Array.from({ length: doors }, (_, i) => {
+            const doorW = (w - 0.04) / doors;
+            const x = -w / 2 + 0.02 + doorW * (i + 0.5);
+            return (
+              <group key={i} position={[x, legHeight + (bodyH - 0.025) / 2, d / 2 + 0.002]}>
+                <mesh>
+                  <planeGeometry args={[doorW - 0.016, bodyH - 0.06]} />
+                  <meshStandardMaterial color={top} roughness={0.75} />
+                </mesh>
+                <mesh position={[i % 2 === 0 ? doorW / 2 - 0.05 : -doorW / 2 + 0.05, 0, 0.01]}>
+                  <sphereGeometry args={[0.012, 10, 8]} />
+                  <meshStandardMaterial color="#b49b6c" metalness={0.6} roughness={0.35} />
+                </mesh>
+              </group>
+            );
+          })}
+        </>
+      ) : (
+        // an open frame: an apron under the top, so it reads as a table not a slab
+        <mesh position={[0, h - 0.06, 0]}>
+          <boxGeometry args={[w - 0.04, 0.07, d - 0.04]} />
+          <meshStandardMaterial color={body} roughness={0.8} />
+        </mesh>
+      )}
+      <mesh position={[0, h - 0.0125, 0]}>
+        <boxGeometry args={[w + 0.02, 0.025, d + 0.02]} />
+        <meshStandardMaterial color={top} roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+/**
+ * The couch along the right wall, under the framed charts.
+ */
+function Lounge({ theme }: { theme: ThemeName }) {
+  // the sofa keeps its colour with the lights on, like the rest of the room
+  const colours = sofa.dark;
+  const couch = useModel("couch", { materials: { DarkRed: colours.body, Red: colours.seat } });
+
+  return (
+    <group>
+      {/* the model faces +z; turned to face into the room from the right wall */}
+      <group position={[COUCH.x, 0, COUCH.z]} rotation={[0, -Math.PI / 2, 0]}>
+        <primitive object={couch} scale={COUCH_SCALE} position={[0, 0, -0.3 * COUCH_SCALE]} />
+      </group>
+    </group>
+  );
+}
+
+/**
+ * Low record cabinet against the door wall, left of the door: the turntable
+ * and the record sleeves (the Records exhibit) sit on top of it. Long axis
+ * runs along the wall (x); it faces into the room (-z).
+ */
+const RECORD_CABINET_Z = ROOM_Z - WALL_GAP - RECORD_CABINET.d / 2;
+
+function RecordCabinet({ theme }: { theme: ThemeName }) {
+  const t = themes[theme];
+  return (
+    <group position={[RECORD_CABINET.x, 0, RECORD_CABINET_Z]} rotation={[0, Math.PI, 0]}>
+      <Cabinet
+        size={[RECORD_CABINET.length, RECORD_CABINET.h, RECORD_CABINET.d]}
+        top={t.beam}
+        body="#2e2720"
+        legs={t.trim}
+        legHeight={0.12}
+        doors={2}
+      />
+    </group>
+  );
+}
+
+/** Reading lamp at the door end of the couch, lit a little warmer after dark. */
+function FloorLamp({ theme }: { theme: ThemeName }) {
+  const t = themes[theme];
+  const quality = useContext(QualityCtx);
+  return (
+    <group position={[ROOM_X - 0.26, 0, COUCH_Z + 1.3]}>
+      <mesh position={[0, 0.015, 0]}>
+        <cylinderGeometry args={[0.15, 0.17, 0.03, 24]} />
+        <meshStandardMaterial color={t.trim} roughness={0.5} metalness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.78, 0]}>
+        <cylinderGeometry args={[0.012, 0.012, 1.5, 8]} />
+        <meshStandardMaterial color={t.trim} roughness={0.4} metalness={0.5} />
+      </mesh>
+      <mesh position={[0, 1.55, 0]}>
+        <cylinderGeometry args={[0.15, 0.2, 0.26, 28, 1, true]} />
+        <meshStandardMaterial
+          color={t.paper}
+          emissive={t.lamp}
+          emissiveIntensity={theme === "dark" ? 0.55 : 0.12}
+          roughness={0.9}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {quality === "desktop" && theme === "dark" && (
+        <pointLight position={[0, 1.45, 0]} distance={2.4} decay={1.8} intensity={0.9} color={t.lamp} />
+      )}
     </group>
   );
 }
@@ -1630,16 +1867,17 @@ function Desk({ theme }: { theme: ThemeName }) {
     <group position={[DESK.x, 0, DESK.z]}>
       <primitive object={desk} scale={DESK_SCALE} position={DESK_OFFSET} />
 
-      <primitive object={mug} scale={MUG_SCALE} position={[-0.85, 0.789, 0.15]} />
+      <primitive object={mug} scale={MUG_SCALE} position={[-0.8, 0.789, -0.12]} />
 
       {/* pen */}
-      <mesh position={[-0.12, 0.775, -0.3]} rotation={[0, 0.2, Math.PI / 2]}>
+      <mesh position={[-0.3, 0.749, 0.2]} rotation={[0, 0.2, Math.PI / 2]}>
         <cylinderGeometry args={[0.011, 0.011, 0.16, 6]} />
         <meshStandardMaterial color="#2b2b30" roughness={0.4} metalness={0.5} />
       </mesh>
 
       {/* desk lamp */}
-      <group position={[0.86, DESK.top, -0.26]} rotation={[0, -0.6, 0]}>
+      {/* at the right-hand end, clear of the window jamb (x 0.61..0.73) */}
+      <group position={[0.8, DESK.top, -0.17]} rotation={[0, -0.6, 0]}>
         <primitive object={deskLamp} scale={LAMP_SCALE} position={[0.008, 0, -0.004]} />
         {quality === "desktop" && (
           <pointLight
@@ -1654,7 +1892,7 @@ function Desk({ theme }: { theme: ThemeName }) {
       </group>
 
       {/* chair, pushed back and turned as if someone just got up */}
-      <group position={[0, 0, 0.88]} rotation={[0, Math.PI - 0.28, 0]}>
+      <group position={[0, 0, 0.72]} rotation={[0, Math.PI - 0.28, 0]}>
         <primitive object={chair} scale={CHAIR_SCALE} position={CHAIR_OFFSET} />
       </group>
     </group>
@@ -1671,14 +1909,16 @@ function Bookshelf({ theme }: { theme: ThemeName }) {
   const booksB = useModel("books");
   const booksC = useModel("books");
   const booksD = useModel("books");
+  const booksE = useModel("books");
 
-  // [model, local x, shelf index] — spread across both units, keeping clear
-  // of the football (unit A, shelf 1) and the worksheets (unit B, shelf 3)
+  // [model, local x, shelf index] — a stack on some shelves, not all, kept
+  // clear of the football (unit A, shelf 1)
   const stacks: [THREE.Object3D, number, number][] = [
     [booksA, -0.62, 0],
     [booksB, -0.6, 3],
     [booksC, 0.35, 0],
     [booksD, 0.58, 2],
+    [booksE, 0.3, 4],
   ];
 
   return (
@@ -1780,6 +2020,282 @@ function Journal({ accent, theme }: { accent: string; theme: ThemeName }) {
   return <primitive object={journal} scale={JOURNAL_SCALE} position={[0, 0.165 * JOURNAL_SCALE, 0]} />;
 }
 
+/**
+ * Loads a handful of remote images as textures, in order, leaving a gap for
+ * any that fail. Same plain-TextureLoader approach as the pinboard: the
+ * objects render straight away and the art pops in.
+ */
+function useTextures(urls: string[]) {
+  const [textures, setTextures] = useState<(THREE.Texture | null)[]>([]);
+  const key = urls.join("|");
+
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
+    const loaded: (THREE.Texture | null)[] = new Array(urls.length).fill(null);
+    let cancelled = false;
+    urls.forEach((url, i) => {
+      loader.load(
+        url,
+        (texture) => {
+          if (cancelled) {
+            texture.dispose();
+            return;
+          }
+          texture.colorSpace = THREE.SRGBColorSpace;
+          loaded[i] = texture;
+          setTextures([...loaded]);
+        },
+        undefined,
+        () => undefined,
+      );
+    });
+    return () => {
+      cancelled = true;
+      loaded.forEach((texture) => texture?.dispose());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return textures;
+}
+
+const albumCovers = (lifeSnapshot.spotify?.albums ?? [])
+  .map((album) => album.cover)
+  .filter((cover): cover is string => Boolean(cover))
+  .map(coverAt300);
+
+/** the record's height above the plinth */
+const PLATTER_TOP = 0.062;
+const SLEEVE = 0.29;
+
+/**
+ * Records: a turntable on the record cabinet by the couch, playing the
+ * year's most played album, with the next few sleeves stood up beside it,
+ * fanned so each one shows a strip of its cover.
+ */
+function Records({ theme }: { theme: ThemeName }) {
+  const t = themes[theme];
+  const quality = useContext(QualityCtx);
+  const sleeves = quality === "mobile" ? 4 : 6;
+  // the label on the record is #1; the sleeves are #2 onwards
+  const textures = useTextures(albumCovers.slice(0, sleeves + 1));
+  const record = useRef<THREE.Group>(null);
+  const still = useMemo(prefersReducedMotion, []);
+
+  useFrame((_, delta) => {
+    // a slow, steady turn: real 33⅓ reads as a blur at this size
+    if (record.current && !still) record.current.rotation.y -= delta * 1.4;
+  });
+
+  const label = textures[0] ?? null;
+
+  return (
+    <group>
+      {/* plinth */}
+      <mesh position={[0, 0.025, 0]}>
+        <boxGeometry args={[0.38, 0.05, 0.3]} />
+        <meshStandardMaterial color={theme === "dark" ? "#2a2520" : "#3a332b"} roughness={0.55} />
+      </mesh>
+      {/* platter */}
+      <mesh position={[-0.04, 0.054, 0]}>
+        <cylinderGeometry args={[0.122, 0.122, 0.008, 40]} />
+        <meshStandardMaterial color="#8d8f94" roughness={0.35} metalness={0.7} />
+      </mesh>
+      {/* the record, with the album's cover as its centre label */}
+      <group ref={record} position={[-0.04, PLATTER_TOP, 0]}>
+        <mesh>
+          <cylinderGeometry args={[0.118, 0.118, 0.004, 48]} />
+          <meshStandardMaterial color="#121214" roughness={0.3} metalness={0.2} />
+        </mesh>
+        <mesh position={[0, 0.0025, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.042, 32]} />
+          <meshStandardMaterial
+            key={label ? label.uuid : "blank"}
+            map={label ?? undefined}
+            color={label ? "#ffffff" : t.paper}
+            roughness={0.7}
+          />
+        </mesh>
+        <mesh position={[0, 0.004, 0]}>
+          <cylinderGeometry args={[0.004, 0.004, 0.008, 8]} />
+          <meshStandardMaterial color="#c9c9cc" metalness={0.8} roughness={0.3} />
+        </mesh>
+      </group>
+      {/* tonearm, resting on the outer grooves */}
+      <mesh position={[0.15, 0.065, -0.09]}>
+        <cylinderGeometry args={[0.018, 0.018, 0.03, 16]} />
+        <meshStandardMaterial color="#8d8f94" metalness={0.7} roughness={0.35} />
+      </mesh>
+      <mesh position={[0.1, 0.078, -0.01]} rotation={[0, -0.95, 0]}>
+        <boxGeometry args={[0.008, 0.006, 0.2]} />
+        <meshStandardMaterial color="#c9c9cc" metalness={0.8} roughness={0.3} />
+      </mesh>
+
+      {/* sleeves beside the turntable, front to back */}
+      {Array.from({ length: sleeves }, (_, i) => {
+        const texture = textures[i + 1] ?? null;
+        return (
+          <group key={i} position={[0.42 + i * 0.07, 0, 0.07 - i * 0.024]} rotation={[-0.17, 0, 0]}>
+            <mesh position={[0, SLEEVE / 2, 0]}>
+              <boxGeometry args={[SLEEVE, SLEEVE, 0.004]} />
+              <meshStandardMaterial color={t.paper} roughness={0.85} />
+            </mesh>
+            <mesh position={[0, SLEEVE / 2, 0.0025]}>
+              <planeGeometry args={[SLEEVE, SLEEVE]} />
+              <meshStandardMaterial
+                key={texture ? texture.uuid : "blank"}
+                map={texture ?? undefined}
+                color={texture ? "#ffffff" : "#b9b3a6"}
+                roughness={0.8}
+              />
+            </mesh>
+          </group>
+        );
+      }).reverse()}
+    </group>
+  );
+}
+
+/*
+ * Poly Pizza "Trainer" (jeremy, CC-BY 3.0). Measured from the glTF: 9.70 long
+ * on x with the toe at +x, 4.76 tall from y 0.011, 3.48 wide. Scaled to a
+ * 30cm shoe and turned so the toe points along local +z.
+ */
+const TRAINER_SCALE = 0.3 / 9.7;
+
+/** Running: a pair of trainers, kicked off by the door. */
+function Trainers({ accent }: { accent: string }) {
+  // separate clones, one per foot; the black upper takes the exhibit's colour
+  const left = useModel("trainer", { materials: { "1A1A1A": accent } });
+  const right = useModel("trainer", { materials: { "1A1A1A": accent } });
+
+  const shoe = (model: THREE.Object3D, position: [number, number, number], rotation: number) => (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <primitive
+        object={model}
+        scale={TRAINER_SCALE}
+        rotation={[0, -Math.PI / 2, 0]}
+        position={[0, -0.011 * TRAINER_SCALE, 0.068 * TRAINER_SCALE]}
+      />
+    </group>
+  );
+
+  return (
+    <group>
+      {shoe(left, [-0.07, 0, 0], 0.12)}
+      {shoe(right, [0.08, 0, 0.04], -0.22)}
+    </group>
+  );
+}
+
+/** The flashcard's face: today's word, written up on a ruled index card. */
+function makeFlashcardTexture(word: { es: string; en: string } | null, accent: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 600;
+  canvas.height = 360;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#fbf8f0";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // ruled lines, and the red header rule an index card has
+  ctx.strokeStyle = "rgba(90, 130, 190, 0.35)";
+  ctx.lineWidth = 2;
+  for (let y = 120; y < canvas.height; y += 44) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(200, 70, 60, 0.7)";
+  ctx.beginPath();
+  ctx.moveTo(0, 76);
+  ctx.lineTo(canvas.width, 76);
+  ctx.stroke();
+
+  ctx.fillStyle = accent;
+  ctx.font = "600 22px system-ui, sans-serif";
+  ctx.fillText("PALABRA DEL DÍA", 32, 52);
+
+  if (word) {
+    ctx.fillStyle = "#1c1914";
+    ctx.textAlign = "center";
+    // shrink a long word to fit rather than running it off the card
+    let size = 64;
+    do {
+      ctx.font = `600 ${size}px Georgia, serif`;
+      size -= 4;
+    } while (ctx.measureText(word.es).width > canvas.width - 60 && size > 28);
+    ctx.fillText(word.es, canvas.width / 2, 200);
+
+    ctx.fillStyle = "#5b554b";
+    ctx.font = "italic 28px Georgia, serif";
+    // one or two lines of English under it
+    const words = word.en.split(" ");
+    const lines: string[] = [];
+    let line = "";
+    for (const w of words) {
+      const next = line ? `${line} ${w}` : w;
+      if (ctx.measureText(next).width > canvas.width - 80 && line) {
+        lines.push(line);
+        line = w;
+      } else line = next;
+    }
+    if (line) lines.push(line);
+    lines.slice(0, 2).forEach((text, i) => ctx.fillText(text, canvas.width / 2, 262 + i * 40));
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+/** Spanish: a phrasebook on the desk, with the day's flashcard beside it. */
+function Phrasebook({ accent, theme }: { accent: string; theme: ThemeName }) {
+  const t = themes[theme];
+  const texture = useMemo(
+    () => makeFlashcardTexture(wordOfTheDay(lifeSnapshot.spanish?.words ?? [])?.word ?? null, accent),
+    [accent],
+  );
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  return (
+    <group>
+      {/* the book: a red cover with a yellow band, pages showing at the edge */}
+      <group position={[-0.07, 0, 0]} rotation={[0, -0.18, 0]}>
+        <mesh position={[0, 0.013, 0]}>
+          <boxGeometry args={[0.13, 0.026, 0.19]} />
+          <meshStandardMaterial color="#b3362c" roughness={0.7} />
+        </mesh>
+        <mesh position={[0.003, 0.013, 0]}>
+          <boxGeometry args={[0.128, 0.018, 0.182]} />
+          <meshStandardMaterial color={t.paper} roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 0.0265, 0.03]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.13, 0.03]} />
+          <meshStandardMaterial color={accent} roughness={0.6} />
+        </mesh>
+      </group>
+
+      {/* a spare card under the day's, knocked a little askew */}
+      <mesh position={[0.1, 0.002, 0.02]} rotation={[0, 0.25, 0]}>
+        <boxGeometry args={[0.15, 0.002, 0.09]} />
+        <meshStandardMaterial color="#f4efe2" roughness={0.9} />
+      </mesh>
+      <group position={[0.09, 0.0045, 0.025]} rotation={[0, 0.06, 0]}>
+        <mesh>
+          <boxGeometry args={[0.15, 0.002, 0.09]} />
+          <meshStandardMaterial color="#fbf8f0" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[0.15, 0.09]} />
+          <meshStandardMaterial map={texture} roughness={0.85} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 /** Lid geometry, shared with the camera so "sitting down" lands on the screen. */
 const LID_PIVOT = new THREE.Vector3(0, 0.018, -0.12);
 const LID_TILT = -0.28;
@@ -1836,9 +2352,9 @@ function whiteboardViewpoint(camera: THREE.PerspectiveCamera, reserved = 0) {
   const lift = (reserved / 2) * visibleHeight;
 
   return {
-    pos: new THREE.Vector2(BOARD_ANCHOR[0] - BOARD_FACE - distance, BOARD_ANCHOR[2]),
+    pos: new THREE.Vector2(BOARD_ANCHOR[0] + BOARD_FACE + distance, BOARD_ANCHOR[2]),
     y: BOARD_ANCHOR[1] - lift,
-    yaw: -Math.PI / 2,
+    yaw: Math.PI / 2,
     pitch: 0,
   };
 }
@@ -1918,39 +2434,10 @@ function Laptop({ item }: { item: ExploreItem }) {
   );
 }
 
-/** Contact: a small wall shelf by the door, with a letter left on it. */
-function PostRack({ theme }: { theme: ThemeName }) {
-  const t = themes[theme];
+/** Contact: a few letters left on the desk. */
+function Letters() {
   const envelopes = useModel("envelopes");
-
-  return (
-    <group>
-      {/* wall plate the shelf mounts to */}
-      <mesh position={[0, 0.02, 0.01]}>
-        <boxGeometry args={[0.38, 0.14, 0.02]} />
-        <meshStandardMaterial color={t.trim} roughness={0.8} />
-      </mesh>
-      {/* shelf board, on two brackets */}
-      <mesh position={[0, 0, 0.1]}>
-        <boxGeometry args={[0.34, 0.025, 0.18]} />
-        <meshStandardMaterial color={t.beam} roughness={0.75} />
-      </mesh>
-      {[-0.12, 0.12].map((x) => (
-        <mesh key={x} position={[x, -0.04, 0.06]}>
-          <boxGeometry args={[0.02, 0.08, 0.1]} />
-          <meshStandardMaterial color={t.trim} roughness={0.7} metalness={0.2} />
-        </mesh>
-      ))}
-
-      {/* a letter, resting flat on top */}
-      <primitive
-        object={envelopes}
-        scale={ENVELOPES_SCALE}
-        rotation={[0, 0.3, 0]}
-        position={[0.02, 0.028, 0.1]}
-      />
-    </group>
-  );
+  return <primitive object={envelopes} scale={ENVELOPES_SCALE} position={[0, 0.012, 0]} />;
 }
 
 /** Photos: a corkboard of real prints off the gallery, pinned up slightly crooked. */
@@ -2077,8 +2564,8 @@ function Pinboard({ theme }: { theme: ThemeName }) {
 function Exhibit({ item, theme }: { item: ExploreItem; theme: ThemeName }) {
   return (
     <Interactable id={item.id} position={item.position} rotation={item.rotation}>
-      {item.form === "chart" && <PhotoFrame src="/explore/emissions-chart.jpg" width={1.15} theme={theme} />}
-      {item.form === "map" && <PhotoFrame src="/explore/river-map.jpg" width={1.15} theme={theme} />}
+      {item.form === "chart" && <PhotoFrame src="/explore/emissions-chart.jpg" width={0.85} theme={theme} />}
+      {item.form === "map" && <PhotoFrame src="/explore/river-map.jpg" width={0.85} theme={theme} />}
       {item.form === "football" && (
         <>
           <Football />
@@ -2097,10 +2584,10 @@ function Exhibit({ item, theme }: { item: ExploreItem; theme: ThemeName }) {
           <HitProxy size={[0.42, 0.2, 0.44]} position={[0, 0.06, 0]} />
         </>
       )}
-      {item.form === "post" && (
+      {item.form === "letters" && (
         <>
-          <PostRack theme={theme} />
-          <HitProxy size={[0.5, 0.4, 0.24]} position={[0, 0, 0.08]} />
+          <Letters />
+          <HitProxy size={[0.3, 0.16, 0.32]} position={[0, 0.05, 0]} />
         </>
       )}
       {item.form === "laptop" && (
@@ -2110,7 +2597,25 @@ function Exhibit({ item, theme }: { item: ExploreItem; theme: ThemeName }) {
         </>
       )}
       {item.form === "pinboard" && <Pinboard theme={theme} />}
-      <Label text={item.label} y={item.labelY} accent={item.accent} theme={theme} />
+      {item.form === "records" && (
+        <>
+          <Records theme={theme} />
+          <HitProxy size={[0.44, 0.2, 0.34]} position={[0, 0.06, 0]} />
+          <HitProxy size={[0.6, 0.34, 0.3]} position={[0.62, 0.16, 0]} />
+        </>
+      )}
+      {item.form === "trainers" && (
+        <>
+          <Trainers accent={item.accent} />
+          <HitProxy size={[0.42, 0.26, 0.42]} position={[0, 0.1, 0]} />
+        </>
+      )}
+      {item.form === "phrasebook" && (
+        <>
+          <Phrasebook accent={item.accent} theme={theme} />
+          <HitProxy size={[0.38, 0.16, 0.3]} position={[0.01, 0.05, 0]} />
+        </>
+      )}
       <ClickHint accent={item.accent} theme={theme} />
     </Interactable>
   );
@@ -2125,13 +2630,14 @@ function Ceiling({ theme }: { theme: ThemeName }) {
   const { map, bumpMap } = useMemo(() => makeCeilingTextures(t.ceiling, t.trim), [t.ceiling, t.trim]);
 
   useEffect(() => {
-    map.repeat.set(3, 4);
-    bumpMap.repeat.set(3, 4);
+    // one tile per 2.13 x 1.7m, as in the original 6.4 x 6.8m room
+    map.repeat.set(width / 2.13, depth / 1.7);
+    bumpMap.repeat.set(width / 2.13, depth / 1.7);
     return () => {
       map.dispose();
       bumpMap.dispose();
     };
-  }, [map, bumpMap]);
+  }, [map, bumpMap, width, depth]);
 
   return (
     <group>
@@ -2181,8 +2687,9 @@ function Room({ theme }: { theme: ThemeName }) {
   const { colorMap, bumpMap } = useMemo(() => makeWoodTextures(t.wood), [t.wood]);
 
   useEffect(() => {
-    colorMap.repeat.set(3, 4);
-    bumpMap.repeat.set(3, 4);
+    // planks stay the same size whatever the room's size
+    colorMap.repeat.set((ROOM_X * 2) / 2.13, (ROOM_Z * 2) / 1.7);
+    bumpMap.repeat.set((ROOM_X * 2) / 2.13, (ROOM_Z * 2) / 1.7);
     return () => {
       colorMap.dispose();
       bumpMap.dispose();
@@ -2214,9 +2721,8 @@ function Room({ theme }: { theme: ThemeName }) {
   ];
   /*
    * The back wall is four plain strips framing a real opening rather than one
-   * plane, so the street outside is genuinely visible through it. Same "skip a
-   * gap" trick the skirting already uses for the door, on two axes instead of
-   * one. The window's own frame overlaps every cut edge, so no seam shows.
+   * plane, so the street outside is genuinely visible through it. The window's
+   * own frame overlaps every cut edge, so no seam shows.
    */
   const winLeft = WINDOW.x - WINDOW.w / 2;
   const winRight = WINDOW.x + WINDOW.w / 2;
@@ -2240,34 +2746,29 @@ function Room({ theme }: { theme: ThemeName }) {
       h: WALL_HEIGHT - winTop,
     },
   ];
-  // Skirting breaks for the door rather than running behind it. The gap is
-  // a touch narrower than the door, so the cut ends stay hidden.
-  const skirtEndX = ROOM_X - CORNER_INSET / 2;
-  const skirtEndZ = ROOM_Z - CORNER_INSET / 2;
-  const doorLeft = DOOR.x - DOOR.width / 2 - 0.05;
-  const doorRight = DOOR.x + DOOR.width / 2 + 0.05;
-  // the bookshelf now stands clear of the wall, so the left run goes uncut
-  const trims: { pos: [number, number, number]; rot: number; span: number }[] = [
-    { pos: [0, 0, -ROOM_Z + 0.06], rot: 0, span: width - CORNER_INSET },
+  /*
+   * Skirting as paint, not a board: a flat band of the trim colour along the
+   * foot of each wall, a few millimetres proud so it never z-fights. Being
+   * flat, nothing that stands against a wall can clip it. It breaks for the
+   * door, whose frame covers the cut ends.
+   */
+  const SKIRT_H = 0.12;
+  const SKIRT_OFF = 0.004;
+  const doorLeft = DOOR.x - DOOR.width / 2 + 0.03;
+  const doorRight = DOOR.x + DOOR.width / 2 - 0.03;
+  const skirting: { pos: [number, number, number]; rot: number; span: number }[] = [
+    { pos: [0, SKIRT_H / 2, -ROOM_Z + SKIRT_OFF], rot: 0, span: width },
+    { pos: [-ROOM_X + SKIRT_OFF, SKIRT_H / 2, 0], rot: Math.PI / 2, span: depth },
+    { pos: [ROOM_X - SKIRT_OFF, SKIRT_H / 2, 0], rot: -Math.PI / 2, span: depth },
     {
-      pos: [(doorLeft - skirtEndX) / 2, 0, ROOM_Z - 0.06],
-      rot: 0,
-      span: doorLeft + skirtEndX,
+      pos: [(-ROOM_X + doorLeft) / 2, SKIRT_H / 2, ROOM_Z - SKIRT_OFF],
+      rot: Math.PI,
+      span: doorLeft + ROOM_X,
     },
     {
-      pos: [(doorRight + skirtEndX) / 2, 0, ROOM_Z - 0.06],
-      rot: 0,
-      span: skirtEndX - doorRight,
-    },
-    {
-      pos: [-ROOM_X + 0.06, 0, 0],
-      rot: Math.PI / 2,
-      span: depth - CORNER_INSET,
-    },
-    {
-      pos: [ROOM_X - 0.06, 0, 0],
-      rot: Math.PI / 2,
-      span: depth - CORNER_INSET,
+      pos: [(doorRight + ROOM_X) / 2, SKIRT_H / 2, ROOM_Z - SKIRT_OFF],
+      rot: Math.PI,
+      span: ROOM_X - doorRight,
     },
   ];
 
@@ -2284,12 +2785,27 @@ function Room({ theme }: { theme: ThemeName }) {
         />
       </mesh>
 
-      <primitive object={rug} scale={[RUG_SCALE, RUG_SCALE * 0.2, RUG_SCALE]} position={[0, 0.001, 0.1]} />
+      {/*
+        in front of the couch, marking out the lounge: 1.6 x 2.0, stopping
+        short of the desk chair
+      */}
+      <primitive
+        object={rug}
+        scale={[1.6 / 2.131, RUG_SCALE * 0.2, 2.0 / 3.093]}
+        position={[0.55, 0.001, COUCH_Z + 0.2]}
+      />
 
       {walls.map((wall, i) => (
         <mesh key={`w${i}`} position={wall.pos} rotation={[0, wall.rot, 0]}>
           <planeGeometry args={[wall.span, WALL_HEIGHT]} />
           <meshStandardMaterial color={t.wall} roughness={1} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+
+      {skirting.map((band, i) => (
+        <mesh key={`sk${i}`} position={band.pos} rotation={[0, band.rot, 0]}>
+          <planeGeometry args={[band.span, SKIRT_H]} />
+          <meshStandardMaterial color={t.trim} roughness={0.9} />
         </mesh>
       ))}
 
@@ -2300,14 +2816,6 @@ function Room({ theme }: { theme: ThemeName }) {
         </mesh>
       ))}
 
-      {trims.map((trim, i) => (
-        <group key={`t${i}`} position={trim.pos} rotation={[0, trim.rot, 0]}>
-          <mesh position={[0, 0.13, 0]}>
-            <boxGeometry args={[trim.span, 0.26, 0.1]} />
-            <meshStandardMaterial color={t.trim} roughness={0.9} />
-          </mesh>
-        </group>
-      ))}
 
       <Ceiling theme={theme} />
       <Window theme={theme} />
@@ -2321,7 +2829,10 @@ function Room({ theme }: { theme: ThemeName }) {
           <Door theme={theme} />
           <Desk theme={theme} />
           <Bookshelf theme={theme} />
-          <Plant theme={theme} position={[2.3, 0, 2.35]} />
+          <Plant theme={theme} position={[-ROOM_X + 0.36, 0, -ROOM_Z + 0.36]} scale={1.15} rotation={1.1} />
+          <Lounge theme={theme} />
+          <RecordCabinet theme={theme} />
+          <FloorLamp theme={theme} />
           <OutsideView theme={theme} />
         </Suspense>
       </ModelBoundary>
@@ -2405,10 +2916,20 @@ function Player({
   /** eye height while docked, which sits below the board's centre */
   const eyeY = useRef(EYE_HEIGHT);
   const boardPose = useRef<Pose | null>(null);
+  /*
+   * Pinch-zoom while docked at the board, on touch. Zoom divides the framing
+   * distance; pan is how far the camera has slid off the board's centre, in
+   * metres along the wall (x) and up it (y). Both reset on docking and on
+   * leaving, so each visit starts with the whole board in view.
+   */
+  const boardZoom = useRef(1);
+  const boardPan = useRef(new THREE.Vector2());
+  /** the docked camera's current distance from the board, for pan speed */
+  const boardDistance = useRef(1);
 
   const clampTarget = (v: THREE.Vector2) => {
-    v.x = THREE.MathUtils.clamp(v.x, -ROOM_X + 0.8, ROOM_X - 0.8);
-    v.y = THREE.MathUtils.clamp(v.y, -ROOM_Z + 0.9, ROOM_Z - 0.9);
+    v.x = THREE.MathUtils.clamp(v.x, -ROOM_X + 0.55, ROOM_X - 0.55);
+    v.y = THREE.MathUtils.clamp(v.y, -ROOM_Z + 0.6, ROOM_Z - 0.6);
     for (const o of obstacles) {
       const dx = v.x - o.x;
       const dy = v.y - o.z;
@@ -2422,6 +2943,12 @@ function Player({
   };
 
   useEffect(() => {
+    /*
+     * r3f points a new camera at the origin, which from anywhere off x = 0
+     * leaves a roll in rotation.z. Only yaw and pitch are driven below, so
+     * clear the lot once, or that roll stays for good.
+     */
+    camera.rotation.set(0, 0, 0);
     camera.rotation.order = "YXZ";
     handle.recentre.current = () => {
       pos.current.copy(START);
@@ -2457,6 +2984,9 @@ function Player({
         pitch: pitch.current,
       };
       preDrawPose.current = here;
+      ctx.current.boardDocked = true;
+      boardZoom.current = 1;
+      boardPan.current.set(0, 0);
       boardPose.current = whiteboardViewpoint(
         camera as THREE.PerspectiveCamera,
         reservedForUi(gl.domElement.clientHeight, bandPx),
@@ -2499,6 +3029,9 @@ function Player({
       drawing.current = false;
       preDrawPose.current = null;
       boardPose.current = null;
+      ctx.current.boardDocked = false;
+      boardZoom.current = 1;
+      boardPan.current.set(0, 0);
       eyeY.current = EYE_HEIGHT;
       if (!back || !docked) return;
       cinematic.current = {
@@ -2560,6 +3093,64 @@ function Player({
     // across the gap
     let onBoard = false;
 
+    /*
+     * Pinch and pan on the docked board. Every finger down on the canvas is
+     * tracked; when a second one lands the stroke the first one started is
+     * lifted and the pair zooms and pans instead. Drawing doesn't resume until
+     * every finger is up, so letting go of a pinch one finger at a time
+     * doesn't leave a line behind.
+     */
+    const touches = new Map<number, { x: number; y: number }>();
+    let pinch: { distance: number; zoom: number; midX: number; midY: number } | null = null;
+    let pinchLock = false;
+    const MAX_ZOOM = 4;
+
+    const pair = () => {
+      const [a, b] = Array.from(touches.values());
+      return {
+        distance: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        midX: (a.x + b.x) / 2,
+        midY: (a.y + b.y) / 2,
+      };
+    };
+
+    /** keeps the zoomed view on the board rather than the wall around it */
+    const clampPan = () => {
+      const spare = 1 - 1 / boardZoom.current;
+      const pan = boardPan.current;
+      pan.x = THREE.MathUtils.clamp(pan.x, -(BOARD_SIZE[0] / 2) * spare, (BOARD_SIZE[0] / 2) * spare);
+      pan.y = THREE.MathUtils.clamp(pan.y, -(BOARD_SIZE[1] / 2) * spare, (BOARD_SIZE[1] / 2) * spare);
+    };
+
+    const startPinch = () => {
+      // lift whatever the first finger had started
+      if (active !== null) {
+        ctx.current.whiteboardPointer?.(0, 0, "up");
+        active = null;
+        onBoard = false;
+      }
+      pinch = { ...pair(), zoom: boardZoom.current };
+      pinchLock = true;
+    };
+
+    const movePinch = () => {
+      if (!pinch) return;
+      const now2 = pair();
+      boardZoom.current = THREE.MathUtils.clamp(pinch.zoom * (now2.distance / pinch.distance), 1, MAX_ZOOM);
+      /*
+       * Pan follows the fingers: the board under them moves with them, so
+       * the camera goes the other way. Docked, the camera faces -x, so screen
+       * right is world -z (hence the +) and screen down is world down.
+       */
+      const fov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
+      const metresPerPx = (2 * boardDistance.current * Math.tan(fov / 2)) / Math.max(1, el.clientHeight);
+      boardPan.current.x += (now2.midX - pinch.midX) * metresPerPx;
+      boardPan.current.y += (now2.midY - pinch.midY) * metresPerPx;
+      clampPan();
+      pinch.midX = now2.midX;
+      pinch.midY = now2.midY;
+    };
+
     /** Where a screen point lands on the board, in the board's own UV space. */
     const boardHit = (clientX: number, clientY: number) => {
       const board = ctx.current.whiteboard;
@@ -2575,6 +3166,15 @@ function Player({
     };
 
     const onDown = (e: PointerEvent) => {
+      if (drawing.current && e.pointerType === "touch" && !cinematic.current) {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touches.size === 2) {
+          el.setPointerCapture(e.pointerId);
+          startPinch();
+          return;
+        }
+        if (touches.size > 2 || pinchLock) return;
+      }
       if (active !== null || cinematic.current) return;
 
       if (drawing.current) {
@@ -2600,6 +3200,13 @@ function Player({
     };
 
     const onMovePointer = (e: PointerEvent) => {
+      if (touches.has(e.pointerId)) {
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pinch && touches.size >= 2) {
+          movePinch();
+          return;
+        }
+      }
       if (active !== e.pointerId) return;
 
       if (drawing.current) {
@@ -2626,6 +3233,13 @@ function Player({
     };
 
     const onUp = (e: PointerEvent) => {
+      if (touches.delete(e.pointerId)) {
+        if (el.hasPointerCapture(e.pointerId) && active !== e.pointerId) el.releasePointerCapture(e.pointerId);
+        if (touches.size < 2) pinch = null;
+        // a second finger can carry on a pinch the first one started
+        if (touches.size >= 2 && pinchLock) pinch = { ...pair(), zoom: boardZoom.current };
+        if (touches.size === 0) pinchLock = false;
+      }
       if (active !== e.pointerId) return;
       const wasTap = moved < 12 && performance.now() - startedAt < 600;
       active = null;
@@ -2709,13 +3323,19 @@ function Player({
         THREE.MathUtils.lerp(shot.from.y, shot.to.y, e),
         THREE.MathUtils.lerp(shot.from.pos.y, shot.to.pos.y, e),
       );
-      state.camera.rotation.y = THREE.MathUtils.lerp(shot.from.yaw, shot.to.yaw, e);
+      /*
+       * Turn the short way round. Dragging to look winds yaw up without
+       * limit, so lerping straight to the target's yaw could take the
+       * camera through one or more full spins on the way to the board.
+       */
+      const turn = THREE.MathUtils.euclideanModulo(shot.to.yaw - shot.from.yaw + Math.PI, Math.PI * 2) - Math.PI;
+      state.camera.rotation.y = shot.from.yaw + turn * e;
       state.camera.rotation.x = THREE.MathUtils.lerp(shot.from.pitch, shot.to.pitch, e);
       if (t >= 1) {
         if (shot.release) {
           pos.current.copy(shot.to.pos);
           target.current.copy(shot.to.pos);
-          yaw.current = shot.to.yaw;
+          yaw.current = shot.from.yaw + turn;
           pitch.current = shot.to.pitch;
         }
         cinematic.current = null;
@@ -2733,10 +3353,19 @@ function Player({
      * computed for the old aspect.
      */
     if (drawing.current) {
-      const pose = whiteboardViewpoint(
+      const fitted = whiteboardViewpoint(
         state.camera as THREE.PerspectiveCamera,
         reservedForUi(gl.domElement.clientHeight),
       );
+      // the fitted pose stands straight out from the board along +x
+      const face = BOARD_ANCHOR[0] + BOARD_FACE;
+      const distance = (fitted.pos.x - face) / boardZoom.current;
+      boardDistance.current = distance;
+      const pose: Pose = {
+        ...fitted,
+        pos: new THREE.Vector2(face + distance, fitted.pos.y + boardPan.current.x),
+        y: fitted.y + boardPan.current.y,
+      };
       boardPose.current = pose;
       const k = still ? 1 : 1 - Math.exp(-12 * Math.min(delta, 0.05));
       pos.current.lerp(pose.pos, k);
@@ -2823,6 +3452,7 @@ export function ExploreScene({
     whiteboardDeselect: null,
     whiteboardDeleteNote: null,
     whiteboardTool: { ...DEFAULT_TOOL },
+    boardDocked: false,
   });
   const t = themes[theme];
 
@@ -2842,7 +3472,7 @@ export function ExploreScene({
             fov: quality === "mobile" ? 72 : 65,
             near: 0.1,
             far: 120,
-            position: [0, EYE_HEIGHT, START.y],
+            position: [START.x, EYE_HEIGHT, START.y],
           }}
           style={{
             touchAction: "none",

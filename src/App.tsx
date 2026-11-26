@@ -17,10 +17,7 @@ export function App() {
   }, [hash]);
 
   return (
-    <div className="home-bg" style={{
-      minHeight: "100vh",
-      background: "linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--background) 96%, black 4%) 42%, color-mix(in srgb, var(--background) 92%, black 8%) 100%)",
-    }}>
+    <div className="home-bg">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:text-ink focus:outline-none"
@@ -28,7 +25,7 @@ export function App() {
         Skip to content
       </a>
       <Nav />
-      <main id="main-content" className="mx-auto flex w-full max-w-site flex-col gap-16 px-4 py-10 sm:px-6 lg:gap-24 lg:px-8 lg:py-14">
+      <main id="main-content" className="mx-auto flex w-full max-w-site flex-col gap-20 px-3 pb-10 pt-1 sm:px-6 sm:pt-2 lg:gap-28 lg:px-16 lg:pb-14">
         <Hero />
         <About />
         <Projects />

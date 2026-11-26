@@ -51,6 +51,7 @@ export function PhotoGroup({ photos, indexOffset, isMobile, slotHeight, bottomPa
           groupPhotos={photos}
           onClose={handleClose}
           onCurrentChange={setLiftedId}
+          onLand={() => setLiftedId(null)}
         />
       )}
     </>

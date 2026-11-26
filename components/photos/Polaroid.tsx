@@ -58,8 +58,11 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen, placement, l
         lift: { scale: 1.05, y: -12, rotate: rotation * 0.4, zIndex: 20, transition: LIFT_SPRING },
         press: { scale: 1.02, y: -6, transition: { type: "spring", stiffness: 500, damping: 30 } },
       }}
-      whileHover="lift"
-      whileTap="press"
+      // While it is "in hand" it must sit at rest, not raised: the lightbox flies
+      // back to its resting spot, so a print still lifted from the click would
+      // jump down the moment it reappears.
+      whileHover={lifted ? undefined : "lift"}
+      whileTap={lifted ? undefined : "press"}
     >
       {tape && (
         <div
@@ -81,6 +84,7 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen, placement, l
         />
       )}
       <motion.div
+        data-polaroid-frame
         variants={{
           lift: { boxShadow: SHADOW_LIFTED, transition: LIFT_SPRING },
           press: { boxShadow: SHADOW_LIFTED },

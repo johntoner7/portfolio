@@ -1,5 +1,6 @@
 import { Mail } from "lucide-react";
 
+import { ButtonLink } from "@/components/Button";
 import { MotionSection } from "@/components/MotionSection";
 import { siteData } from "@/lib/data";
 
@@ -21,33 +22,24 @@ function LinkedinIcon({ className }: { className?: string }) {
 
 export function Contact() {
   return (
-    <MotionSection id="contact" className="rounded-3xl border border-divider bg-surface/70 p-6 sm:p-8" delay={0.32}>
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-ocean">{siteData.contact.title}</p>
+    <MotionSection id="contact" className="rounded-tile bg-surface p-6 sm:p-10">
+      <h2 className="font-display text-4xl tracking-[-0.02em] text-ink sm:text-5xl">{siteData.contact.title}</h2>
       <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="space-y-4">
           <p className="max-w-2xl text-lg leading-8 text-muted sm:text-xl">{siteData.contact.copy}</p>
           <div className="flex flex-wrap gap-3">
-            <a
-              href={`mailto:${siteData.contact.email}`}
-              className="inline-flex items-center gap-2 rounded-full bg-ocean px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-ocean/85"
-            >
+            <ButtonLink href={`mailto:${siteData.contact.email}`} variant="solid" size="lg">
               <Mail className="h-4 w-4" />
               Email
-            </a>
-            <a
-              href={siteData.contact.github}
-              className="inline-flex items-center gap-2 rounded-full border border-divider px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-ocean hover:bg-ocean/10"
-            >
+            </ButtonLink>
+            <ButtonLink href={siteData.contact.github} size="lg">
               <GithubIcon className="h-4 w-4" />
               GitHub
-            </a>
-            <a
-              href={siteData.contact.linkedin}
-              className="inline-flex items-center gap-2 rounded-full border border-divider px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-ocean hover:bg-ocean/10"
-            >
+            </ButtonLink>
+            <ButtonLink href={siteData.contact.linkedin} size="lg">
               <LinkedinIcon className="h-4 w-4" />
               LinkedIn
-            </a>
+            </ButtonLink>
           </div>
         </div>
       </div>

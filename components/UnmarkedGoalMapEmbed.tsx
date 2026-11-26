@@ -41,7 +41,8 @@ function venueKey(venue: Venue) {
   return `${venue.properties.club_slug}-${venue.properties.slug}`;
 }
 
-export function UnmarkedGoalMapEmbed() {
+/** `fullscreen`: the map fills the whole-window dialog instead of a fixed height. */
+export function UnmarkedGoalMapEmbed({ fullscreen = false }: { fullscreen?: boolean }) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [data, setData] = useState<MapData | null>(null);
@@ -77,6 +78,11 @@ export function UnmarkedGoalMapEmbed() {
     });
     mapRef.current = map;
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
+
+    // The container can still be settling when the map is made (inside the
+    // full-window dialog, say), so keep the canvas matched to it.
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(mapContainer.current);
 
     map.on("load", () => {
       const sourceFeatures = venues.map((venue) => ({
@@ -142,7 +148,7 @@ export function UnmarkedGoalMapEmbed() {
       map.on("mouseleave", "salah-venues", () => { map.getCanvas().style.cursor = ""; });
     });
 
-    return () => { map.remove(); mapRef.current = null; };
+    return () => { resizeObserver.disconnect(); map.remove(); mapRef.current = null; };
   }, [data, venues]);
 
   const resetMap = () => {
@@ -155,9 +161,14 @@ export function UnmarkedGoalMapEmbed() {
   };
 
   return (
-    <div className="px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
-      <div className="relative h-[480px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 sm:h-[540px]">
-        {MAPBOX_TOKEN && <div ref={mapContainer} className="absolute inset-0" />}
+    <div className={fullscreen ? "p-4 sm:p-6" : "px-6 pb-6 pt-0 sm:px-8 sm:pb-8"}>
+      <div
+        className={[
+          "relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950",
+          fullscreen ? "h-[calc(100dvh-8.5rem)] min-h-[420px]" : "h-[480px] sm:h-[540px]",
+        ].join(" ")}
+      >
+        {MAPBOX_TOKEN && <div ref={mapContainer} className="h-full w-full" />}
         {!MAPBOX_TOKEN && <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-zinc-400">Add VITE_MAPBOX_TOKEN to enable the map.</div>}
         {MAPBOX_TOKEN && !data && !error && <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 text-sm text-zinc-400">Loading Salah&apos;s goal map…</div>}
         {error && <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-zinc-400">{error}</div>}

@@ -1,13 +1,6 @@
 export type NavLink = {
   label: string;
   href: string;
-  /**
-   * Renders as a pill rather than as plain text. The other links are either
-   * anchors down this page or a word that explains itself ("Photos"); the room
-   * is neither, so as plain text in that row it reads as another section and
-   * nobody can tell what clicking it does.
-   */
-  feature?: boolean;
 };
 
 export type SkillGroup = {
@@ -33,6 +26,13 @@ export type ProjectPreview = {
   alt: string;
 };
 
+/** The headline figure on a project's selector tab. */
+export type ProjectSignal = {
+  category: string;
+  value: string;
+  label: string;
+};
+
 export type Project = {
   title: string;
   slug: string;
@@ -40,6 +40,7 @@ export type Project = {
   description: string;
   stack: string[];
   links: ProjectLink[];
+  signal: ProjectSignal;
   preview?: ProjectPreview;
 };
 
@@ -55,20 +56,29 @@ export const siteData = {
     descriptor: "Software Engineer",
   },
   nav: {
-    links: [
-      { label: "Projects", href: "#projects" },
+    // Places on the homepage, numbered in the phone menu like an atlas's plates.
+    sections: [
+      { label: "Work", href: "#projects" },
+      { label: "About", href: "#about" },
+      { label: "Contact", href: "#contact" },
+    ] satisfies NavLink[],
+    // Other pages: kept apart, so nobody mistakes them for another section.
+    places: [
       { label: "Photos", href: "/photos" },
-      // "Explore" named the action but not the destination. This one word is
-      // the difference between a mystery box and an invitation.
-      { label: "3D Room", href: "/explore", feature: true },
     ] satisfies NavLink[],
   },
   hero: {
-    eyebrow: "Portfolio",
     title: "John Toner",
     copy: "Software Engineer at Symphony. I build full-stack applications to automate workflows and turn complex data into usable products.",
     primaryCta: { label: "View Projects", href: "#projects" },
     secondaryCta: { label: "Get in Touch", href: "#contact" },
+    photos: {
+      title: "Photos",
+      href: "/photos",
+      // Cloudinary ids from data/photos.json: landscapes, no crowds
+      featured: ["travel/img-3282", "travel/img-3342", "travel/img-5667"],
+    },
+    // Shown on the 3D room's whiteboard, not on the homepage.
     focus: {
       title: "Current focus",
       body: [
@@ -79,9 +89,18 @@ export const siteData = {
   },
   about: {
     title: "About",
+    // Kept low-key on purpose: a small link for people already reading about me.
+    room: {
+      title: "Or walk around my office",
+      body: "A 3D room you can explore in the browser.",
+      href: "/explore",
+      // a frame rendered from the room itself
+      image: "/home/room.jpg",
+    },
     body: [
       "I'm a software engineer at Symphony in Belfast, working on the systems that keep encrypted communications secure.",
-      "Before Symphony I was a Senior Associate Software Engineer at PwC, working across Python services, React interfaces, Databricks pipelines, and AI-driven document processing. I first joined PwC on a 15-month placement as a degree apprentice, building Go backend services and React TypeScript interfaces from design through to deployment.",
+      "I graduated from Queen's University Belfast in 2025 with a first-class BEng in Software Engineering.",
+      "Before working at Symphony, I was a Senior Associate Software Engineer at PwC, working across Python services, React interfaces, Databricks pipelines, and AI-driven document processing.  I first worked at PwC on a 15-month placement as a degree apprentice, building Go backend services and React TypeScript interfaces from design through to deployment.",
       "Outside of work I build open data tools. Two are publicly deployed, with one covering NI agricultural emissions, and the other mapping 35 years of river phosphorus data across 1,200 monitoring stations.",
     ],
     usageNotes: {
@@ -123,6 +142,7 @@ export const siteData = {
     {
       title: "Climate Gap NI",
       slug: "ni-agricultural-emissions",
+      signal: { category: "Climate data", value: "34 years", label: "of emissions data" },
       hook: "NI cut overall emissions 31.5% since 1990, but agriculture emissions increased.",
       description:
         "Scrollytelling data tool built on 34 years of NAEI emissions data. Includes an interactive scenario modeller for testing intervention combinations against the 2030 target.",
@@ -139,6 +159,7 @@ export const siteData = {
     {
       title: "NI Rivers Tool",
       slug: "lough-neagh-phosphorus-pipeline",
+      signal: { category: "Environmental data", value: "170k+", label: "water-quality readings" },
       hook: "Mapping river phosphorus data spanning 35 years across 1,200 monitoring stations.",
       description:
         "FastAPI backend with PostGIS queries and a React frontend using Mapbox GL JS. Processes 170,000+ readings from government sources, with some stations holding records dating back to 1990.",
@@ -155,6 +176,7 @@ export const siteData = {
     {
       title: "Unmarked",
       slug: "unmarked-goals-map",
+      signal: { category: "Football data", value: "70", label: "players mapped" },
       hook: "Every stadium where a footballer has scored, mapped.",
       description:
         "Kotlin and Spring Boot REST API over PostgreSQL, with a Next.js frontend rendering per-player maps in Mapbox GL JS. A Python pipeline scrapes, geocodes and ingests match data for 70 players, giving per-stadium breakdowns of appearances, goals and assists alongside guess-the-player and daily challenge modes.",
@@ -183,5 +205,6 @@ export const siteData = {
   },
   footer: {
     copy: "John Toner · 2026",
+    room: { label: "Explore the room", href: "/explore" },
   },
 } as const;

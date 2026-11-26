@@ -5,19 +5,23 @@ import { motion } from "framer-motion";
 type MotionSectionProps = {
   children: ReactNode;
   className?: string;
-  delay?: number;
   id?: string;
 };
 
-export function MotionSection({ children, className, delay = 0, id }: MotionSectionProps) {
+/**
+ * A small rise as a section scrolls in. Content is never hidden while it
+ * waits: only position animates, so nothing is blank on a slow device, in a
+ * screenshot, or for a reader that never scrolls.
+ */
+export function MotionSection({ children, className, id }: MotionSectionProps) {
   return (
     <motion.section
       id={id}
       className={className}
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ y: 16 }}
+      whileInView={{ y: 0 }}
       viewport={{ once: true, amount: 0.08 }}
-      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.section>

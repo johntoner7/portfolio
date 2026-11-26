@@ -8,7 +8,7 @@ Credits button in the explore room, which renders `MODEL_CREDITS` from
 
 | File | Model | Creator | Licence |
 |---|---|---|---|
-| `fairylights.glb` | [Holiday lights](https://poly.pizza/m/2LU0ahKH437) | Poly by Google | CC-BY 3.0 |
+| `trainer.glb` | [Trainer](https://poly.pizza/m/cs7k_ENAZjQ) | jeremy | CC-BY 3.0 |
 | `worksheets.glb` | [Small Stack of Paper](https://poly.pizza/m/aiBozYlPe--) | Jarlan Perez | CC-BY 3.0 |
 | `envelopes.glb` | [Envelopes](https://poly.pizza/m/78Q1KEu-sSR) | Jarlan Perez | CC-BY 3.0 |
 | `mug.glb` | [Mug](https://poly.pizza/m/2jVUdnj4mVP) | Poly by Google | CC-BY 3.0 |

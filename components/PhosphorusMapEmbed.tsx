@@ -130,7 +130,11 @@ function Sparkline({ series }: { series: StationTimeSeries["series"] }) {
   );
 }
 
-export function PhosphorusMapEmbed({ embedded = false }: { embedded?: boolean }) {
+/**
+ * `fullscreen` lays the demo out for the whole-window dialog: the map fills the
+ * height, with the station details in a column beside it on wide screens.
+ */
+export function PhosphorusMapEmbed({ embedded = false, fullscreen = false }: { embedded?: boolean; fullscreen?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const resizeRef = useRef<ResizeObserver | null>(null);
@@ -475,7 +479,15 @@ export function PhosphorusMapEmbed({ embedded = false }: { embedded?: boolean })
   }, [selectedSeries]);
 
   return (
-    <article className={embedded ? "px-6 pb-6 pt-0 sm:px-8 sm:pb-8" : "rounded-[2rem] border border-divider bg-surface/70 p-6 shadow-glow sm:p-8"}>
+    <article
+      className={
+        fullscreen
+          ? "p-4 sm:p-6 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-4"
+          : embedded
+            ? "px-6 pb-6 pt-0 sm:px-8 sm:pb-8"
+            : "rounded-[2rem] border border-divider bg-surface/70 p-6 shadow-glow sm:p-8"
+      }
+    >
       {!embedded && (
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
@@ -498,11 +510,15 @@ export function PhosphorusMapEmbed({ embedded = false }: { embedded?: boolean })
         </div>
       )}
 
-      <div className="mt-6 rounded-2xl border border-divider bg-page/60 p-3">
-        <div ref={containerRef} className="h-[440px] overflow-hidden rounded-xl" />
+      <div className={["rounded-2xl border border-divider bg-page/60 p-3", fullscreen ? "" : "mt-6"].join(" ")}>
+        <div
+          ref={containerRef}
+          className={["overflow-hidden rounded-xl", fullscreen ? "h-[60dvh] lg:h-[calc(100dvh-8.5rem)]" : "h-[440px]"].join(" ")}
+        />
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
+      <div className={fullscreen ? "mt-4 lg:mt-0" : ""}>
+      <div className={fullscreen ? "grid gap-3" : "mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-start"}>
         <div className="rounded-2xl border border-divider bg-page/60 p-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-ink">
             <MapPinned className="h-4 w-4 text-ocean" />
@@ -544,6 +560,7 @@ export function PhosphorusMapEmbed({ embedded = false }: { embedded?: boolean })
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
       {!token && !error && <p className="mt-4 text-sm text-muted">Waiting for the Mapbox token from the river backend.</p>}
+      </div>
     </article>
   );
 }

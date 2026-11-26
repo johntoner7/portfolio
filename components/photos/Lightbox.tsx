@@ -13,11 +13,15 @@ interface LightboxProps {
   onClose: () => void;
   /** Tells the group which polaroid is "off the table" as the viewer pages through. */
   onCurrentChange: (id: string) => void;
+  /** The print is about to land: show it on the table underneath the frame. */
+  onLand?: () => void;
 }
 
 const FULL_WIDTH = 1200;
 const OPEN_SPRING = { type: "spring", stiffness: 210, damping: 26, mass: 0.9 } as const;
-const CLOSE_EASE = { duration: 0.38, ease: [0.32, 0.72, 0, 1] } as const;
+const CLOSE_EASE = { duration: 0.42, ease: [0.32, 0.72, 0, 1] } as const;
+// the table's film vignette, which the lightbox leaves off while viewing
+const VIGNETTE = "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)";
 
 /** Where the polaroid for `id` sits on the page, as a transform relative to `target`. */
 function flightFrom(id: string, target: HTMLElement) {
@@ -72,11 +76,13 @@ function LightboxImage({ photo, isMobile }: { photo: Photo; isMobile: boolean })
           transition: "opacity 0.45s ease",
         }}
       />
+      {/* faded in as the print flies home, so it lands looking like the copy on the table */}
+      <div data-lightbox-vignette style={{ position: "absolute", inset: 0, background: VIGNETTE, opacity: 0, pointerEvents: "none" }} />
     </div>
   );
 }
 
-export function Lightbox({ photo, groupPhotos, onClose, onCurrentChange }: LightboxProps) {
+export function Lightbox({ photo, groupPhotos, onClose, onCurrentChange, onLand }: LightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(groupPhotos.findIndex((p) => p.id === photo.id));
   const current = groupPhotos[currentIndex];
   const isMobile = useIsMobile();
@@ -119,12 +125,47 @@ export function Lightbox({ photo, groupPhotos, onClose, onCurrentChange }: Light
 
     const fade = animate(backdrop, { opacity: 0 }, { duration: 0.3, ease: "easeIn" });
     const to = reduceMotion ? null : flightFrom(current.id, frame);
-    const fly = to
-      ? animate(frame, { x: to.x, y: to.y, scale: to.scale, rotate: to.rotate }, CLOSE_EASE)
-      : animate(frame, { opacity: 0, scale: 0.96 }, { duration: 0.2 });
-    await Promise.all([fade, fly]);
+    if (!to) {
+      onLand?.();
+      await Promise.all([fade, animate(frame, { opacity: 0, scale: 0.96 }, { duration: 0.2 })]);
+      return onClose();
+    }
+
+    /*
+     * Land as the print on the table, not a bigger copy of it. The lightbox
+     * frame's borders are thinner for its size than the polaroid's and it has
+     * no vignette, so on the way down the borders grow to the polaroid's (in
+     * the frame's own, pre-scale pixels) and the vignette fades in. The real
+     * print is shown underneath for the last stretch and the frame fades off
+     * it, so any leftover difference blends rather than pops.
+     */
+    const card = frame.firstElementChild as HTMLElement | null;
+    const origin = document.querySelector<HTMLElement>(`[data-photo-id="${CSS.escape(current.id)}"] [data-polaroid-frame]`);
+    const morphs: ReturnType<typeof animate>[] = [];
+    if (card && origin) {
+      const s = 1 / to.scale;
+      const pad = getComputedStyle(origin);
+      morphs.push(
+        animate(
+          card,
+          {
+            paddingTop: `${parseFloat(pad.paddingTop) * s}px`,
+            paddingLeft: `${parseFloat(pad.paddingLeft) * s}px`,
+            paddingRight: `${parseFloat(pad.paddingRight) * s}px`,
+          },
+          CLOSE_EASE,
+        ),
+      );
+    }
+    const vignette = frame.querySelector<HTMLElement>("[data-lightbox-vignette]");
+    if (vignette) morphs.push(animate(vignette, { opacity: 1 }, CLOSE_EASE));
+
+    onLand?.();
+    const fly = animate(frame, { x: to.x, y: to.y, scale: to.scale, rotate: to.rotate }, CLOSE_EASE);
+    const handOver = animate(frame, { opacity: [1, 1, 0] }, { duration: CLOSE_EASE.duration + 0.08, times: [0, 0.7, 1] });
+    await Promise.all([fade, fly, handOver, ...morphs]);
     onClose();
-  }, [current.id, onClose, reduceMotion]);
+  }, [current.id, onClose, onLand, reduceMotion]);
 
   useEffect(() => {
     onCurrentChange(current.id);

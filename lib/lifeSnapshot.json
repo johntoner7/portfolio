@@ -1,0 +1,216 @@
+{
+  "generatedOn": "2026-11-26",
+  "spotify": {
+    "from": "2026-08-28",
+    "to": "2026-11-26",
+    "hours": 79,
+    "artists": 152,
+    "daysWithMusic": 82,
+    "span": 91,
+    "streakDays": 18,
+    "topArtists": [
+      {
+        "name": "Drake",
+        "plays": 307,
+        "hours": 16.7
+      },
+      {
+        "name": "J. Cole",
+        "plays": 199,
+        "hours": 10.6
+      },
+      {
+        "name": "Kanye West",
+        "plays": 178,
+        "hours": 9.9
+      },
+      {
+        "name": "Kendrick Lamar",
+        "plays": 66,
+        "hours": 4.3
+      },
+      {
+        "name": "JAŸ-Z",
+        "plays": 66,
+        "hours": 3.3
+      }
+    ],
+    "topTrack": {
+      "name": "B.B. King Freestyle (with Drake)",
+      "artist": "Lil Wayne",
+      "plays": 19
+    },
+    "albums": [
+      {
+        "name": "The Fall-Off",
+        "artist": "J. Cole",
+        "plays": 91,
+        "cover": "https://i.scdn.co/image/ab67616d0000b27380788f104c780412212e97e3"
+      },
+      {
+        "name": "ICEMAN",
+        "artist": "Drake",
+        "plays": 55,
+        "cover": "https://i.scdn.co/image/ab67616d0000b273fe9d3ab9adb1d3b59835b81c"
+      },
+      {
+        "name": "808s & Heartbreak",
+        "artist": "Kanye West",
+        "plays": 25,
+        "cover": "https://i.scdn.co/image/ab67616d0000b27365fbf56c2837be4879b5020a"
+      },
+      {
+        "name": "ASTROWORLD",
+        "artist": "Travis Scott",
+        "plays": 23,
+        "cover": "https://i.scdn.co/image/ab67616d0000b273daec894c14c0ca42d76eeb32"
+      },
+      {
+        "name": "B.B. King Freestyle",
+        "artist": "Lil Wayne",
+        "plays": 19,
+        "cover": "https://i.scdn.co/image/ab67616d0000b2737f06ef8f9489978f59ebe74a"
+      },
+      {
+        "name": "HEROES & VILLAINS",
+        "artist": "Metro Boomin",
+        "plays": 19,
+        "cover": "https://i.scdn.co/image/ab67616d0000b273c4fee55d7b51479627c31f89"
+      }
+    ],
+    "complete": false
+  },
+  "running": {
+    "from": "2026-08-28",
+    "to": "2026-11-26",
+    "runs": 26,
+    "km": 147,
+    "hours": 14,
+    "longestKm": 11,
+    "fastestPace": 317,
+    "fastestPaceMinKm": 5,
+    "shoes": []
+  },
+  "spanish": {
+    "lessons": 2,
+    "learned": 0,
+    "words": [
+      {
+        "es": "la antelación",
+        "en": "advance notice; plenty of time beforehand"
+      },
+      {
+        "es": "marcar",
+        "en": "to mark or tick an option"
+      },
+      {
+        "es": "alojarse",
+        "en": "to stay somewhere (overnight)"
+      },
+      {
+        "es": "el botiquín",
+        "en": "first-aid kit"
+      },
+      {
+        "es": "la libreta",
+        "en": "notebook"
+      },
+      {
+        "es": "familiar",
+        "en": "family-oriented; wanting to spend time with your family"
+      },
+      {
+        "es": "el autocar",
+        "en": "coach, especially one used for excursions or tours"
+      },
+      {
+        "es": "subrayar",
+        "en": "to underline"
+      },
+      {
+        "es": "punto com",
+        "en": "dot com"
+      },
+      {
+        "es": "el lío",
+        "en": "mess; difficult situation"
+      },
+      {
+        "es": "la hoguera",
+        "en": "bonfire"
+      },
+      {
+        "es": "la arroba",
+        "en": "the at sign (@)"
+      },
+      {
+        "es": "el archivo",
+        "en": "file; attachment"
+      },
+      {
+        "es": "la copia oculta",
+        "en": "blind copy (BCC)"
+      },
+      {
+        "es": "el destinatario",
+        "en": "recipient"
+      },
+      {
+        "es": "el asunto",
+        "en": "subject line"
+      },
+      {
+        "es": "reenviar",
+        "en": "to forward"
+      },
+      {
+        "es": "el recado",
+        "en": "message; something to pass on"
+      },
+      {
+        "es": "el placer",
+        "en": "pleasure"
+      },
+      {
+        "es": "idóneo",
+        "en": "ideal; suitable"
+      },
+      {
+        "es": "el amante de",
+        "en": "someone who loves or is very keen on"
+      },
+      {
+        "es": "los restos arqueológicos",
+        "en": "archaeological remains"
+      },
+      {
+        "es": "la caldereta de langosta",
+        "en": "lobster stew"
+      },
+      {
+        "es": "el marisco",
+        "en": "seafood; shellfish"
+      },
+      {
+        "es": "el velero",
+        "en": "sailing boat"
+      },
+      {
+        "es": "la vela",
+        "en": "sail; candle"
+      },
+      {
+        "es": "el buceo",
+        "en": "diving; snorkelling"
+      },
+      {
+        "es": "navegar",
+        "en": "to sail; to navigate"
+      },
+      {
+        "es": "la puesta de sol",
+        "en": "sunset"
+      }
+    ]
+  }
+}

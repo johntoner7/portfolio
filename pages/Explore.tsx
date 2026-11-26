@@ -174,6 +174,12 @@ export function Explore() {
   const [photosOpen, setPhotosOpen] = useState(false);
   // docked at the whiteboard, drawing on it
   const [drawingOpen, setDrawingOpen] = useState(false);
+  // the note the wall clock gives when it's clicked, shown for a few seconds
+  const [clockNote, setClockNote] = useState(false);
+  const clockTimer = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (clockTimer.current) window.clearTimeout(clockTimer.current);
+  }, []);
   const [hasDrawing, setHasDrawing] = useState(false);
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [tool, setTool] = useState<BoardTool>(DEFAULT_TOOL);
@@ -254,7 +260,13 @@ export function Explore() {
     return () => portrait.removeEventListener("change", measure);
   }, []);
 
-  const showRotateHint = drawingOpen && isMobile && isPortrait && !rotateHintDismissed;
+  /*
+   * On a touch screen the board gets one short rail: pen or eraser, the four
+   * ink colours, clear and done. Sticky notes, the colour wheel, nib sizes,
+   * download and send all stay on desktop, where there is room for them.
+   */
+  const simpleBoard = isTouch;
+  const showRotateHint = drawingOpen && isMobile && isPortrait && !rotateHintDismissed && !simpleBoard;
 
   /*
    * How much of the bottom of the fixed container is not actually visible.
@@ -355,6 +367,12 @@ export function Explore() {
        * `useThemeMode` watches it — and localStorage is what makes the
        * choice stick across pages, matching the nav's toggle.
        */
+      if (id === "clock") {
+        setClockNote(true);
+        if (clockTimer.current) window.clearTimeout(clockTimer.current);
+        clockTimer.current = window.setTimeout(() => setClockNote(false), 4000);
+        return;
+      }
       if (id === "lightswitch") {
         const next = theme === "dark" ? "light" : "dark";
         document.documentElement.classList.toggle("light", next === "light");
@@ -517,7 +535,7 @@ export function Explore() {
     bandExtra.current = boardBottomGap + keyboardInset;
   }, [boardBottomGap, keyboardInset]);
 
-  const canCollapse = isTouch;
+  const canCollapse = isTouch && !simpleBoard;
   const toolsHidden = canCollapse && toolsCollapsed;
   useEffect(() => {
     collapsedRef.current = toolsHidden;
@@ -908,8 +926,76 @@ export function Explore() {
           </div>
         )}
 
+        {simpleBoard && (
+          <span
+            style={{
+              fontSize: 12,
+              color: "rgb(var(--color-muted))",
+              background: "rgb(var(--color-surface) / 0.85)",
+              borderRadius: 999,
+              padding: "3px 10px",
+            }}
+          >
+            Pinch to zoom · two fingers to move
+          </span>
+        )}
+        {simpleBoard && (
+          <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
+            {([
+              ["pen", Pencil, "Pen"],
+              ["eraser", Eraser, "Eraser"],
+            ] as const).map(([mode, Icon, label]) => (
+              <button
+                key={mode}
+                type="button"
+                aria-label={label}
+                aria-pressed={tool.mode === mode}
+                onClick={() => pickTool({ mode })}
+                style={toolChip(tool.mode === mode, true)}
+              >
+                <Icon style={{ height: 16, width: 16 }} />
+              </button>
+            ))}
+            <span style={railDivider} />
+            {BOARD_INKS.map((colour) => (
+              <button
+                key={colour}
+                type="button"
+                aria-label={`Colour ${colour}`}
+                aria-pressed={tool.mode === "pen" && tool.colour === colour}
+                // picking a colour means drawing, so it puts the pen back in hand
+                onClick={() => pickTool({ mode: "pen", colour })}
+                style={{
+                  height: 36,
+                  width: 36,
+                  padding: 0,
+                  borderRadius: 999,
+                  background: colour,
+                  cursor: "pointer",
+                  border:
+                    tool.mode === "pen" && tool.colour === colour
+                      ? "2px solid rgb(var(--color-ink))"
+                      : "1px solid rgb(var(--color-divider))",
+                }}
+              />
+            ))}
+            <span style={railDivider} />
+            <button
+              type="button"
+              aria-label="Clear the board"
+              onClick={() => clearBoard.current?.()}
+              style={actionStyle}
+            >
+              <Trash2 style={{ height: 15, width: 15 }} />
+            </button>
+            <button type="button" aria-label="Done" onClick={leaveDrawing} style={actionStyle}>
+              <Check style={{ height: 15, width: 15 }} />
+            </button>
+          </div>
+        )}
+
         {/* Colour wheel — mixes a shade outside the four presets */}
-        {wheelOpen && showColours && !toolsHidden && (
+        {!simpleBoard && wheelOpen && showColours && !toolsHidden && (
           <div
             style={{
               display: "flex",
@@ -977,7 +1063,7 @@ export function Explore() {
         )}
 
         {/* Send form: the second, deliberate press that actually sends */}
-        {sendOpen && (
+        {!simpleBoard && sendOpen && (
           <div
             style={{
               width: "100%",
@@ -1038,7 +1124,7 @@ export function Explore() {
         )}
 
         {/* Note editor — appears against the note you just tapped */}
-        {noteDraft !== null && (
+        {!simpleBoard && noteDraft !== null && (
           <div
             style={{
               ...toolRail,
@@ -1099,6 +1185,7 @@ export function Explore() {
           leaving the actions — which are the ones you cannot do without,
           Done above all.
         */}
+        {!simpleBoard && (
         <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
           {foldButton}
           {toolsHidden && <span style={railDivider} />}
@@ -1231,14 +1318,41 @@ export function Explore() {
           {oneRow && !toolsHidden && <span style={railDivider} />}
           {(oneRow || toolsHidden) && actionButtons}
         </div>
+        )}
 
         {/* Actions. Sideways on a phone, or folded, they join the row above. */}
-        {!oneRow && !toolsHidden && (
+        {!simpleBoard && !oneRow && !toolsHidden && (
           <div style={{ ...toolRail, flexWrap: "wrap", justifyContent: "center" }}>
             {actionButtons}
           </div>
         )}
       </div>
+
+      {clockNote && (
+        <div
+          role="status"
+          style={{
+            position: "absolute",
+            top: "calc(76px + env(safe-area-inset-top))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 35,
+            maxWidth: "calc(100vw - 32px)",
+            padding: "12px 18px",
+            borderRadius: 14,
+            border: "1px solid rgb(var(--color-divider))",
+            background: "rgb(var(--color-surface) / 0.94)",
+            backdropFilter: "blur(10px)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+            color: "rgb(var(--color-ink))",
+            fontSize: 15,
+            textAlign: "center",
+            pointerEvents: "none",
+          }}
+        >
+          The time and weather are accurate to Belfast!
+        </div>
+      )}
 
       <ExplorePanel item={selected} onClose={() => setSelectedId(null)} />
       <ExploreCredits open={creditsOpen} onClose={() => setCreditsOpen(false)} />

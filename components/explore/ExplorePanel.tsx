@@ -244,11 +244,94 @@ export function ExplorePanel({ item, onClose }: { item: ExploreItem | null; onCl
               </p>
             )}
 
+            {shown?.feature && (
+              <div
+                style={{
+                  marginTop: shown.hook ? 16 : 0,
+                  padding: "18px 18px 16px",
+                  borderRadius: 14,
+                  border: "1px solid rgb(var(--color-divider))",
+                  borderTop: `3px solid ${accent}`,
+                  background: "rgb(var(--color-page) / 0.6)",
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase",
+                    color: accent,
+                  }}
+                >
+                  {shown.feature.kicker}
+                </p>
+                <p
+                  lang="es"
+                  style={{
+                    margin: "10px 0 0",
+                    fontFamily: "var(--font-syne), sans-serif",
+                    fontSize: 28,
+                    lineHeight: 1.15,
+                    color: "rgb(var(--color-ink))",
+                  }}
+                >
+                  {shown.feature.big}
+                </p>
+                <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.5, color: "rgb(var(--color-muted))" }}>
+                  {shown.feature.small}
+                </p>
+              </div>
+            )}
+
+            {shown?.stats && shown.stats.length > 0 && (
+              <div
+                style={{
+                  marginTop: shown.hook || shown.feature ? 16 : 0,
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${shown.stats.length}, minmax(0, 1fr))`,
+                  gap: 8,
+                }}
+              >
+                {shown.stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    style={{
+                      minWidth: 0,
+                      padding: "12px 12px 10px",
+                      borderRadius: 12,
+                      border: "1px solid rgb(var(--color-divider))",
+                      background: "rgb(var(--color-page) / 0.5)",
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        fontFamily: "var(--font-syne), sans-serif",
+                        fontSize: 19,
+                        lineHeight: 1.1,
+                        color: "rgb(var(--color-ink))",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {stat.value}
+                    </p>
+                    <p style={{ margin: "5px 0 0", fontSize: 11, lineHeight: 1.35, color: "rgb(var(--color-muted))" }}>
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {shown?.body.map((paragraph, i) => (
               <p
                 key={i}
                 style={{
-                  margin: i === 0 && !shown.hook ? 0 : "12px 0 0",
+                  margin: i === 0 && !shown.hook && !shown.feature && !shown.stats ? 0 : i === 0 ? "16px 0 0" : "12px 0 0",
                   fontSize: 14,
                   lineHeight: 1.7,
                   color: "rgb(var(--color-muted))",
@@ -256,6 +339,115 @@ export function ExplorePanel({ item, onClose }: { item: ExploreItem | null; onCl
               >
                 {paragraph}
               </p>
+            ))}
+
+            {shown?.covers && shown.covers.covers.length > 0 && (
+              <section style={{ marginTop: 22 }}>
+                <SectionLabel>{shown.covers.title}</SectionLabel>
+                <ol
+                  style={{
+                    listStyle: "none",
+                    margin: 0,
+                    padding: 0,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                    gap: 10,
+                  }}
+                >
+                  {shown.covers.covers.map((cover, i) => (
+                    <li key={`${cover.title}-${i}`} style={{ minWidth: 0 }}>
+                      {cover.src ? (
+                        <img
+                          src={cover.src}
+                          alt=""
+                          loading="lazy"
+                          width={300}
+                          height={300}
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            height: "auto",
+                            aspectRatio: "1",
+                            borderRadius: 6,
+                            background: "rgb(var(--color-divider))",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          aria-hidden
+                          style={{ aspectRatio: "1", borderRadius: 6, background: "rgb(var(--color-divider))" }}
+                        />
+                      )}
+                      <p
+                        style={{
+                          margin: "6px 0 0",
+                          fontSize: 12,
+                          lineHeight: 1.3,
+                          color: "rgb(var(--color-ink))",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={cover.title}
+                      >
+                        {cover.title}
+                      </p>
+                      <p
+                        style={{
+                          margin: "1px 0 0",
+                          fontSize: 11,
+                          lineHeight: 1.3,
+                          color: "rgb(var(--color-muted))",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {cover.sub}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+
+            {shown?.lists?.map((list) => (
+              <section key={list.title} style={{ marginTop: 22 }}>
+                <SectionLabel>{list.title}</SectionLabel>
+                <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                  {list.rows.map((row, i) => (
+                    <li
+                      key={`${row.primary}-${i}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "baseline",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        padding: "8px 0",
+                        borderTop: i === 0 ? "none" : "1px solid rgb(var(--color-divider))",
+                      }}
+                    >
+                      <span style={{ minWidth: 0, fontSize: 14, lineHeight: 1.4, color: "rgb(var(--color-ink))" }}>
+                        {row.primary}
+                      </span>
+                      {row.secondary && (
+                        <span
+                          style={{
+                            flexShrink: 1,
+                            minWidth: 0,
+                            textAlign: "right",
+                            fontSize: 12,
+                            lineHeight: 1.4,
+                            color: "rgb(var(--color-muted))",
+                          }}
+                        >
+                          {row.secondary}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </section>
             ))}
 
             {/* grouped chips carry their own headings; a short stack does not */}
@@ -318,6 +510,12 @@ export function ExplorePanel({ item, onClose }: { item: ExploreItem | null; onCl
                   })}
                 </div>
               </section>
+            )}
+
+            {shown?.footnote && (
+              <p style={{ margin: "22px 0 0", fontSize: 12, lineHeight: 1.6, color: "rgb(var(--color-muted))" }}>
+                {shown.footnote}
+              </p>
             )}
           </div>
         </div>

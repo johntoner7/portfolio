@@ -25,6 +25,8 @@
   --color-surface: 28 25 20;
   --color-ocean: 132 168 60;
   --color-env: 180 83 9;
+  --color-data: 245 158 11;
+  --nav-h: 64px;
   --color-ink: 240 237 230;
   --color-muted: 168 162 150;
   --color-divider: 54 48 40;
@@ -34,10 +36,10 @@
   --river-high: #ef4444;
   /* hero farm wards, cattle per ha: the live map's greens, run dark to bright
      because its darkest step (the densest wards) would vanish into this page */
-  --farm-sparse: rgb(20 83 45 / 0.18);
-  --farm-low: rgb(21 128 61 / 0.32);
-  --farm-mid: rgb(34 197 94 / 0.42);
-  --farm-high: rgb(187 247 208 / 0.6);
+  --farm-sparse: rgb(20 83 45 / 0.1);
+  --farm-low: rgb(21 128 61 / 0.14);
+  --farm-mid: rgb(34 197 94 / 0.17);
+  --farm-high: rgb(187 247 208 / 0.22);
 }
 
 
@@ -49,6 +51,7 @@ html.light {
   --color-surface: 255 253 248;
   --color-ocean: 63 98 18;
   --color-env: 161 98 7;
+  --color-data: 146 84 6;
   --color-ink: 28 25 20;
   --color-muted: 96 89 78;
   --color-divider: 214 206 190;
@@ -56,14 +59,20 @@ html.light {
   --river-mid: #d97706;
   --river-high: #b91c1c;
   /* the live map's ramp as-is */
-  --farm-sparse: rgb(248 250 252 / 0.7);
-  --farm-low: rgb(187 247 208 / 0.7);
-  --farm-mid: rgb(22 101 52 / 0.5);
-  --farm-high: rgb(5 46 22 / 0.55);
+  --farm-sparse: rgb(248 250 252 / 0.3);
+  --farm-low: rgb(187 247 208 / 0.35);
+  --farm-mid: rgb(22 101 52 / 0.18);
+  --farm-high: rgb(5 46 22 / 0.24);
 }
 
 html {
   scroll-behavior: smooth;
+  /* anchors land below the sticky nav, not under it */
+  scroll-padding-top: calc(var(--nav-h) + 1rem);
+}
+
+@media (min-width: 768px) {
+  :root { --nav-h: 84px; }
 }
 
 body {
@@ -93,6 +102,16 @@ body {
   syntax: "<angle>";
   inherits: false;
   initial-value: 0deg;
+}
+
+.home-bg {
+  min-height: 100vh;
+  background: linear-gradient(
+    180deg,
+    var(--background) 0%,
+    color-mix(in srgb, var(--background) 96%, black 4%) 42%,
+    color-mix(in srgb, var(--background) 92%, black 8%) 100%
+  );
 }
 
 .home-bg::before {
@@ -319,4 +338,20 @@ html.light .home-bg::after {
   .river-reveal {
     animation: none;
   }
+}
+
+/* Map labels sit over a dense river network, so each gets a halo in the
+   page colour, the way printed atlases knock out the linework behind type. */
+.map-label {
+  text-shadow:
+    0 0 2px rgb(var(--color-surface)),
+    0 0 4px rgb(var(--color-surface)),
+    0 0 6px rgb(var(--color-surface));
+}
+
+/* Hero tiles show their artwork only when there is height for it; a short
+   tile (a small laptop, a phone) keeps just its title. */
+.tile-art { display: none; }
+@container (min-height: 150px) {
+  .tile-art { display: block; }
 }

@@ -19,7 +19,11 @@ export const MODELS = {
   rug: "/models/rug.glb",
   worksheets: "/models/worksheets.glb",
   envelopes: "/models/envelopes.glb",
+  trainer: "/models/trainer.glb",
   ceilinglight: "/models/ceilinglight.glb",
+  // TODO: attribution — looks like Quaternius's "Couch Large" (CC0), same
+  // pack as the plant and rug, but the source page hasn't been confirmed
+  couch: "/models/couch-large.glb",
   // TODO: attribution — source unknown, add to MODEL_CREDITS if CC-BY
   door: "/models/door.glb",
   /*
@@ -37,7 +41,6 @@ export const MODELS = {
   building1: "/models/building-1.glb",
   building2: "/models/building-2.glb",
   building3: "/models/building-3.glb",
-  fairylights: "/models/fairylights.glb",
 } as const;
 
 export type ModelName = keyof typeof MODELS;
@@ -52,11 +55,11 @@ export type ModelCredit = {
 
 export const MODEL_CREDITS: ModelCredit[] = [
   {
-    file: "fairylights.glb",
-    title: "Holiday lights",
-    creator: "Poly by Google",
+    file: "trainer.glb",
+    title: "Trainer",
+    creator: "jeremy",
     licence: "CC-BY 3.0",
-    source: "https://poly.pizza/m/2LU0ahKH437",
+    source: "https://poly.pizza/m/cs7k_ENAZjQ",
   },
   {
     file: "worksheets.glb",

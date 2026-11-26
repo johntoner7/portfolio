@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#14120d"/>
-  <text x="16" y="22" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#84a83c" text-anchor="middle" letter-spacing="-0.5">JT</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <rect width="24" height="24" rx="5.5" fill="#1c1914"/>
+  <path d="M6.25 7H17.75M12.75 7V13.8a3.25 3.25 0 0 1-6.5 0" stroke="#f2efe9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="16.7" cy="16.7" r="1.9" fill="#84a83c"/>
 </svg>
