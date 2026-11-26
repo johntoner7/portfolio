@@ -20,6 +20,8 @@ import { getCloudinaryUrl } from "@/utils/cloudinary";
 export function PhotoScrapbook() {
   const years = usePhotos();
   const isMobile = useIsMobile();
+  // Below this the single-column zigzag reads well; above it that column leaves most of the screen empty.
+  const isWide = !useIsMobile(1024);
   const slotHeight = isMobile ? 160 : 320;
   const bottomPad = isMobile ? 100 : 180;
 
@@ -43,7 +45,7 @@ export function PhotoScrapbook() {
       <ScrollProgress />
       <TableBackground />
 
-      <div style={{ position: "relative", margin: "0 auto", maxWidth: 760, paddingLeft: "1%", paddingRight: "1%", zIndex: 1 }}>
+      <div style={{ position: "relative", margin: "0 auto", maxWidth: isWide ? 1200 : 760, paddingLeft: isWide ? 40 : "1%", paddingRight: isWide ? 40 : "1%", zIndex: 1 }}>
         <div style={{ position: "relative", zIndex: 7, paddingTop: 32, paddingBottom: 160 }}>
           <h1 style={{
             fontFamily: "'Lora', Georgia, serif",
@@ -60,10 +62,29 @@ export function PhotoScrapbook() {
 
           {years.map((yearData, yearIndex) => (
             <div key={yearData.year}>
-              <YearDivider year={yearData.year} />
+              <YearDivider year={yearData.year} large={isWide} />
               {yearData.groups.map((group, groupIndex) => {
                 const offset = globalIndex;
                 globalIndex += group.photos.length;
+                const isLast = groupIndex === yearData.groups.length - 1 && yearIndex === years.length - 1;
+                if (isWide) {
+                  return (
+                    <section
+                      key={group.groupName}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "250px minmax(0, 1fr)",
+                        gap: 56,
+                        alignItems: "start",
+                        paddingTop: 28,
+                        marginBottom: isLast ? 0 : 96,
+                      }}
+                    >
+                      <GroupHeader groupName={group.groupName} photos={group.photos} spread />
+                      <PhotoGroup photos={group.photos} indexOffset={offset} isMobile={false} slotHeight={slotHeight} bottomPad={bottomPad} spread />
+                    </section>
+                  );
+                }
                 return (
                   <div key={group.groupName}>
                     <GroupHeader groupName={group.groupName} photos={group.photos} />

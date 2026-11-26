@@ -19,10 +19,67 @@ function formatDateRange(photos: Photo[]): string {
 interface GroupHeaderProps {
   groupName: string;
   photos: Photo[];
+  /** Desktop spread: a larger title that sits pinned beside its photos, with the places and photo count. */
+  spread?: boolean;
 }
 
-export function GroupHeader({ groupName, photos }: GroupHeaderProps) {
+export function GroupHeader({ groupName, photos, spread = false }: GroupHeaderProps) {
   const dateRange = useMemo(() => formatDateRange(photos), [photos]);
+  const places = useMemo(
+    () => Array.from(new Set(photos.map(p => p.metadata.location?.split(",")[0].trim()).filter(Boolean))),
+    [photos],
+  );
+
+  if (spread) {
+    return (
+      <div style={{ position: "sticky", top: 104, zIndex: 7 }}>
+        <p style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "11px",
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: "rgb(var(--color-muted))",
+          margin: 0,
+        }}>
+          {dateRange}
+        </p>
+        <h2 style={{
+          fontFamily: "'Syne', sans-serif",
+          fontWeight: 600,
+          fontSize: "34px",
+          letterSpacing: "-0.02em",
+          color: "var(--foreground)",
+          margin: "12px 0 0",
+          lineHeight: 1.1,
+          paddingBottom: 4,
+        }}>
+          {groupName}
+        </h2>
+        <div style={{ width: 36, height: 1, background: "rgba(200, 165, 100, 0.55)", margin: "20px 0 16px" }} />
+        {places.length > 0 && (
+          <p style={{
+            fontFamily: "'Lora', Georgia, serif",
+            fontStyle: "italic",
+            fontSize: "15px",
+            lineHeight: 1.6,
+            color: "var(--foreground)",
+            opacity: 0.75,
+            margin: 0,
+          }}>
+            {places.join(" · ")}
+          </p>
+        )}
+        <p style={{
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "12px",
+          color: "rgb(var(--color-muted))",
+          margin: "8px 0 0",
+        }}>
+          {photos.length} {photos.length === 1 ? "photo" : "photos"}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{

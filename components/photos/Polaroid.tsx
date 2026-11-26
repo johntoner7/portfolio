@@ -2,7 +2,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import type { Photo } from "@/hooks/usePhotos";
 import { getCloudinaryUrl } from "@/utils/cloudinary";
-import { getPhotoStyle } from "@/utils/photoStyle";
+import { getPhotoStyle, getTapeStyle, type SpreadPlacement } from "@/utils/photoStyle";
+import { recordRatio, thumbWidth } from "@/utils/photoRatios";
 
 interface PolaroidProps {
   photo: Photo;
@@ -10,12 +11,23 @@ interface PolaroidProps {
   slotTop: number;
   isMobile: boolean;
   onOpen: (photo: Photo) => void;
+  /** Desktop spread: position comes from the group's collage, and the frame gets tape and readable labels. */
+  placement?: SpreadPlacement;
+  /** Hidden while it is open in the lightbox, so it reads as picked up off the table. */
+  lifted?: boolean;
 }
+
+const SHADOW_REST = "0 8px 28px rgba(0,0,0,0.65), 0 3px 8px rgba(0,0,0,0.4)";
+const SHADOW_LIFTED = "0 28px 60px rgba(0,0,0,0.6), 0 10px 20px rgba(0,0,0,0.35)";
+const LIFT_SPRING = { type: "spring", stiffness: 300, damping: 24, mass: 0.7 } as const;
 
 const showLabels = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("labels");
 
-export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidProps) {
-  const { x, yNudge, rotation, width } = getPhotoStyle(photo.id, index, isMobile);
+export function Polaroid({ photo, index, slotTop, isMobile, onOpen, placement, lifted = false }: PolaroidProps) {
+  const scattered = getPhotoStyle(photo.id, index, isMobile);
+  const { x, rotation, width } = placement ?? scattered;
+  const top = placement ? placement.top : slotTop + scattered.yNudge;
+  const tape = placement ? getTapeStyle(photo.id) : null;
   const hasLabel = photo.caption || photo.metadata?.location;
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
@@ -26,10 +38,13 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onOpen(photo); }}
       aria-label={photo.caption || `Photo from ${photo.group}`}
+      data-photo-id={photo.id}
+      data-rotation={rotation}
       style={{
+        visibility: lifted ? "hidden" : "visible",
         position: "absolute",
         left: `${x}%`,
-        top: slotTop + yNudge,
+        top,
         width: `${width}%`,
         cursor: "pointer",
         outline: "none",
@@ -38,16 +53,43 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
       initial={{ opacity: 0, y: 20, rotate: rotation }}
       whileInView={{ opacity: 1, y: 0, rotate: rotation }}
       viewport={{ once: true, margin: "0px 0px -60px 0px" }}
-      transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-      whileHover={{ scale: 1.05, y: -10, rotate: rotation * 0.4, transition: { duration: 0.15 } }}
-      whileTap={{ scale: 0.97, transition: { duration: 0.08 } }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      variants={{
+        lift: { scale: 1.05, y: -12, rotate: rotation * 0.4, zIndex: 20, transition: LIFT_SPRING },
+        press: { scale: 1.02, y: -6, transition: { type: "spring", stiffness: 500, damping: 30 } },
+      }}
+      whileHover="lift"
+      whileTap="press"
     >
-      <div
+      {tape && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: -11,
+            left: `calc(50% + ${tape.offset}%)`,
+            width: `${tape.width}%`,
+            height: 22,
+            transform: `translateX(-50%) rotate(${tape.rotation}deg)`,
+            background: tape.colour,
+            // torn ends
+            clipPath: "polygon(2% 0, 98% 4%, 100% 30%, 97% 55%, 100% 80%, 98% 100%, 1% 96%, 3% 70%, 0 45%, 2% 20%)",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
+            zIndex: 3,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      <motion.div
+        variants={{
+          lift: { boxShadow: SHADOW_LIFTED, transition: LIFT_SPRING },
+          press: { boxShadow: SHADOW_LIFTED },
+        }}
         style={{
           background: "linear-gradient(160deg, #ede5ce 0%, #e8ddc4 60%, #e2d6ba 100%)",
           padding: hasLabel ? "9px 9px 10px" : "9px 9px 30px",
           borderRadius: 2,
-          boxShadow: "0 8px 28px rgba(0,0,0,0.65), 0 3px 8px rgba(0,0,0,0.4)",
+          boxShadow: SHADOW_REST,
           position: "relative",
           overflow: "hidden",
           transform: "perspective(500px) rotateX(3.5deg)",
@@ -59,24 +101,47 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
         </svg>
 
         {/* Photo image */}
-        <div style={{ position: "relative", overflow: "hidden", borderRadius: 1, background: "#f5f5f5" }}>
+        <div style={{ position: "relative", overflow: "hidden", borderRadius: 1, background: "#3a3328" }}>
           {!error ? (
-            <img
-              src={getCloudinaryUrl(photo.cloudinaryId, isMobile ? 380 : 600)}
-              alt={photo.caption || photo.group}
-              loading={index < 2 ? "eager" : "lazy"}
-              fetchPriority={index < 2 ? "high" : "auto"}
-              decoding="async"
-              onLoad={() => setLoaded(true)}
-              onError={() => setError(true)}
-              style={{
-                display: "block",
-                width: "100%",
-                height: "auto",
-                opacity: loaded ? 1 : 0,
-                transition: "opacity 0.35s ease",
-              }}
-            />
+            <>
+              {/* ~1 KB preview: gives the frame its shape almost at once, so the photo resolves in place instead of popping in */}
+              <img
+                src={getCloudinaryUrl(photo.cloudinaryId, 32)}
+                alt=""
+                aria-hidden
+                decoding="async"
+                onLoad={(e) => recordRatio(photo.id, e.currentTarget)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "auto",
+                  filter: "blur(10px)",
+                  transform: "scale(1.08)",
+                }}
+              />
+              <img
+                src={getCloudinaryUrl(photo.cloudinaryId, thumbWidth(isMobile))}
+                alt={photo.caption || photo.group}
+                loading={index < 2 ? "eager" : "lazy"}
+                fetchPriority={index < 2 ? "high" : "auto"}
+                decoding="async"
+                onLoad={(e) => {
+                  recordRatio(photo.id, e.currentTarget);
+                  setLoaded(true);
+                }}
+                onError={() => setError(true)}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "block",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  opacity: loaded ? 1 : 0,
+                  transition: "opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1)",
+                }}
+              />
+            </>
           ) : (
             <div style={{
               display: "flex",
@@ -131,12 +196,12 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
 
         {/* Caption / location */}
         {hasLabel && (
-          <div style={{ paddingTop: 8, paddingBottom: 18, position: "relative", zIndex: 2, textAlign: "center" }}>
+          <div style={{ paddingTop: placement ? 10 : 8, paddingBottom: placement ? 14 : 18, position: "relative", zIndex: 2, textAlign: "center" }}>
             {photo.caption && (
               <p style={{
                 fontFamily: "'Lora', Georgia, serif",
                 fontStyle: "italic",
-                fontSize: "7.5px",
+                fontSize: placement ? "12px" : "7.5px",
                 color: "#6b5a3e",
                 letterSpacing: "0.04em",
                 margin: 0,
@@ -148,7 +213,7 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
             {photo.metadata?.location && (
               <p style={{
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: "6.5px",
+                fontSize: placement ? "9.5px" : "6.5px",
                 color: "#9a8a6e",
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
@@ -159,7 +224,7 @@ export function Polaroid({ photo, index, slotTop, isMobile, onOpen }: PolaroidPr
             )}
           </div>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

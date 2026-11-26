@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Photo } from "@/hooks/usePhotos";
 import { Polaroid } from "./Polaroid";
 import { Lightbox } from "./Lightbox";
+import { getSpreadLayout } from "@/utils/photoStyle";
 
 interface PhotoGroupProps {
   photos: Photo[];
@@ -9,15 +10,23 @@ interface PhotoGroupProps {
   isMobile: boolean;
   slotHeight: number;
   bottomPad: number;
+  /** Lay the group out as a desktop collage instead of the single-column zigzag. */
+  spread?: boolean;
 }
 
-export function PhotoGroup({ photos, indexOffset, isMobile, slotHeight, bottomPad }: PhotoGroupProps) {
+export function PhotoGroup({ photos, indexOffset, isMobile, slotHeight, bottomPad, spread = false }: PhotoGroupProps) {
   const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
 
   const handleOpen = useCallback((photo: Photo) => setLightboxPhoto(photo), []);
-  const handleClose = useCallback(() => setLightboxPhoto(null), []);
+  // Which polaroid is "in hand": hidden on the table while the lightbox shows it.
+  const [liftedId, setLiftedId] = useState<string | null>(null);
+  const handleClose = useCallback(() => {
+    setLightboxPhoto(null);
+    setLiftedId(null);
+  }, []);
 
-  const containerHeight = photos.length * slotHeight + bottomPad;
+  const spreadLayout = useMemo(() => (spread ? getSpreadLayout(photos.map(p => p.id)) : null), [spread, photos]);
+  const containerHeight = spreadLayout ? spreadLayout.height : photos.length * slotHeight + bottomPad;
 
   return (
     <>
@@ -30,6 +39,8 @@ export function PhotoGroup({ photos, indexOffset, isMobile, slotHeight, bottomPa
             slotTop={i * slotHeight}
             isMobile={isMobile}
             onOpen={handleOpen}
+            placement={spreadLayout?.placements[i]}
+            lifted={photo.id === liftedId}
           />
         ))}
       </div>
@@ -39,6 +50,7 @@ export function PhotoGroup({ photos, indexOffset, isMobile, slotHeight, bottomPa
           photo={lightboxPhoto}
           groupPhotos={photos}
           onClose={handleClose}
+          onCurrentChange={setLiftedId}
         />
       )}
     </>
