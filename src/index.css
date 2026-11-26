@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Syne is self-hosted rather than loaded from Google Fonts because Google's
+ * copy strips the stylistic sets. Its default "g" has a flat-cut tail that
+ * looks clipped at display sizes; ss04 swaps in a full two-storey "g".
+ */
+@font-face {
+  font-family: "Syne";
+  src: url("/fonts/syne-latin.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --font-syne: "Syne", sans-serif;
   --font-dm-sans: "DM Sans", sans-serif;
@@ -166,6 +179,14 @@ html.light .home-bg::after {
   h3,
   h4 {
     @apply font-display tracking-tight;
+  }
+
+  .font-display,
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-feature-settings: "ss04";
   }
 
   a {
