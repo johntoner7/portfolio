@@ -66,13 +66,13 @@ export const siteData = {
   hero: {
     eyebrow: "Portfolio",
     title: "John Toner",
-    copy: "Senior Associate Software Engineer at PwC. I build full-stack applications to automate workflows and turn complex data into usable products.",
+    copy: "Software Engineer at Symphony. I build full-stack applications to automate workflows and turn complex data into usable products.",
     primaryCta: { label: "View Projects", href: "#projects" },
     secondaryCta: { label: "Get in Touch", href: "#contact" },
     focus: {
       title: "Current focus",
       body: [
-        "Building agentic capabilities for document processing systems using Python.",
+        "Working on the security of Symphony's encrypted messaging platform.",
         "Personally focused on creating environmental data tools and visualisations.",
       ],
     },
@@ -80,15 +80,15 @@ export const siteData = {
   about: {
     title: "About",
     body: [
-      "I'm a software engineer at PwC, working across Python services, React interfaces, Databricks pipelines, and AI-driven document processing. My work is primarily focused on full-stack delivery.",
-      "I completed a 15-month placement at PwC as a degree apprentice, building Go backend services and React TypeScript interfaces, covering the full lifecycle from design through to deployment.",
+      "I'm a software engineer at Symphony in Belfast, working on the systems that keep encrypted communications secure.",
+      "Before Symphony I was a Senior Associate Software Engineer at PwC, working across Python services, React interfaces, Databricks pipelines, and AI-driven document processing. I first joined PwC on a 15-month placement as a degree apprentice, building Go backend services and React TypeScript interfaces from design through to deployment.",
       "Outside of work I build open data tools. Two are publicly deployed, with one covering NI agricultural emissions, and the other mapping 35 years of river phosphorus data across 1,200 monitoring stations.",
     ],
     usageNotes: {
       Python: "Used professionally at PwC for data processing notebooks, PySpark optimisation, and API testing automation. Used in personal projects for ETL pipelines, Mann-Kendall trend analysis, and FastAPI backend services.",
       TypeScript: "Primary language across personal projects: the emissions tool, phosphorus pipeline frontend, and client-facing tutoring site. Also used for internal interfaces at PwC.",
       Go: "Used for backend services across a 15-month placement, building and maintaining production APIs.",
-      Java: "Primary language throughout university, used across coursework, group projects, and individual assignments over three years.",
+      Java: "Used day to day at Symphony. Also my primary language throughout university, used across coursework, group projects, and individual assignments over three years.",
       Kotlin: "Used to build the Unmarked backend, a Spring Boot REST API serving player, match, and stadium data for 70 footballers from PostgreSQL.",
       SQL: "Used for analytics queries and reporting at PwC, and for spatial joins and trend queries via PostGIS in the phosphorus pipeline.",
       React: "Used in all personal projects including a scrollytelling emissions tool, an interactive geospatial monitoring dashboard, and a client tutoring site. Also used for internal tooling at PwC.",
