@@ -91,8 +91,8 @@ export const siteData = {
     title: "About",
     // Kept low-key on purpose: a small link for people already reading about me.
     room: {
-      title: "Or walk around my office",
-      body: "A 3D room you can explore in the browser.",
+      title: "Walk around my room!",
+      body: "A 3D room you can explore in the browser to learn more about me.",
       href: "/explore",
       // a frame rendered from the room itself
       image: "/home/room.jpg",

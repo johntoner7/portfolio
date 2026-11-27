@@ -165,10 +165,17 @@ const themes = {
     leaf: "#4a6b3a",
     pane: "#2b3d55",
     daylight: "#7793bb",
-    ambient: 0.5,
-    hemi: 0.45,
-    key: 0.4,
-    lampIntensity: 9,
+    /*
+     * Lights off means the ceiling light is actually off: a low fill so you
+     * can still find your way, moonlight through the window, and the room
+     * otherwise lit by its own practicals — floor lamp, desk lamp, fairy lights.
+     */
+    ambient: 0.14,
+    hemi: 0.12,
+    key: 0.32,
+    lampIntensity: 0,
+    lampGlow: 0,
+    practical: 1,
     labelBg: "rgba(20,18,13,0.82)",
     labelInk: "#f0ede6",
     wood: darkWoodPalette,
@@ -197,6 +204,8 @@ const themes = {
     hemi: 0.9,
     key: 1.4,
     lampIntensity: 12,
+    lampGlow: 0.8,
+    practical: 0,
     labelBg: "rgba(20,18,13,0.82)",
     labelInk: "#f0ede6",
     wood: darkWoodPalette,
@@ -247,6 +256,13 @@ const GROUND_TONE = { night: "#243218", day: "#7f9a5c" };
 const CLOUD_TINT = { night: "#2b3240", day: "#f2f5f8" };
 
 const now = () => performance.now() / 1000;
+
+/** 0..1 outside; without live weather it follows the switch, as the window does. */
+const outsideDaylight = (weather: Weather | null, theme: ThemeName) =>
+  weather ? weather.daylight : theme === "dark" ? 0 : 1;
+
+/** Sun through the glass when the room's own lights are off. */
+const SUNLIGHT = "#fff3df";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -405,7 +421,7 @@ function Lamp({ theme }: { theme: ThemeName }) {
     if (group.current && !still) group.current.rotation.z = Math.sin(time * 0.35) * 0.008;
     const flicker = 0.96 + Math.sin(time * 1.2) * 0.04;
     if (light.current) light.current.intensity = t.lampIntensity * flicker;
-    if (bulbMaterial) bulbMaterial.emissiveIntensity = 0.8 * flicker;
+    if (bulbMaterial) bulbMaterial.emissiveIntensity = t.lampGlow * flicker;
   });
 
   return (
@@ -497,8 +513,18 @@ function FairyLights({ theme }: { theme: ThemeName }) {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   });
 
+  // a faint warm wash down the wall they hang on, only once the room is dark
+  const wash = themes[theme].practical * 0.7;
+
   return (
     <group>
+      <pointLight
+        position={[FAIRY.x + 0.4, FAIRY.top - 0.3, (FAIRY.from + FAIRY.to) / 2]}
+        distance={6}
+        decay={1.4}
+        intensity={wash}
+        color="#ffc864"
+      />
       <mesh geometry={wire}>
         <meshStandardMaterial color="#2a2620" roughness={0.6} />
       </mesh>
@@ -563,6 +589,24 @@ function TapMarker({ theme }: { theme: ThemeName }) {
 function Window({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
   const weather = useContext(WeatherCtx);
+  const cloud = weather?.cloud ?? 0;
+  /*
+   * With the lights off the window is the room's main light by day: moonlight
+   * at night, ramping up to proper sun as Belfast gets light. Overcast skies
+   * soften it. With the lights on, nothing here changes from before.
+   */
+  const sun = t.practical * outsideDaylight(weather, theme) * (1 - cloud * 0.45);
+  const keyIntensity =
+    theme === "dark"
+      ? THREE.MathUtils.lerp(t.key, 2.4, sun)
+      : t.key * (1 - cloud * 0.3);
+  const keyColour = useMemo(() => mix(t.daylight, SUNLIGHT, sun), [t.daylight, sun]);
+  const poolTarget = useMemo(() => {
+    const o = new THREE.Object3D();
+    // the floor a couple of metres in from the window
+    o.position.set(0.3, -WINDOW.y, 2.2);
+    return o;
+  }, []);
 
   return (
     <group position={[WINDOW.x, WINDOW.y, -ROOM_Z + 0.06]}>
@@ -576,7 +620,7 @@ function Window({ theme }: { theme: ThemeName }) {
         <meshStandardMaterial
           color={t.daylight}
           emissive={t.daylight}
-          emissiveIntensity={theme === "dark" ? 0.18 : 0.4}
+          emissiveIntensity={theme === "dark" ? 0.18 + sun * 0.5 : 0.4}
           transparent
           opacity={0.14}
           roughness={0.08}
@@ -616,10 +660,21 @@ function Window({ theme }: { theme: ThemeName }) {
         <meshStandardMaterial color={t.trim} roughness={0.85} />
       </mesh>
       {/* overcast outside takes a little off the light coming in */}
-      <directionalLight
-        position={[3.4, 4.2, -8]}
-        intensity={t.key * (1 - (weather?.cloud ?? 0) * 0.3)}
-        color={t.daylight}
+      <directionalLight position={[3.4, 4.2, -8]} intensity={keyIntensity} color={keyColour} />
+      {/*
+        A soft patch of sun on the floor and desk in front of the window.
+        Always mounted (just at zero) so the switch never recompiles shaders.
+      */}
+      <primitive object={poolTarget} />
+      <spotLight
+        position={[0.6, 1.2, -1.2]}
+        target={poolTarget}
+        angle={0.55}
+        penumbra={0.9}
+        distance={9}
+        decay={1.2}
+        intensity={sun * 9}
+        color={SUNLIGHT}
       />
     </group>
   );
@@ -1794,7 +1849,6 @@ function RecordCabinet({ theme }: { theme: ThemeName }) {
 /** Reading lamp at the door end of the couch, lit a little warmer after dark. */
 function FloorLamp({ theme }: { theme: ThemeName }) {
   const t = themes[theme];
-  const quality = useContext(QualityCtx);
   return (
     <group position={[ROOM_X - 0.26, 0, COUCH_Z + 1.3]}>
       <mesh position={[0, 0.015, 0]}>
@@ -1810,14 +1864,12 @@ function FloorLamp({ theme }: { theme: ThemeName }) {
         <meshStandardMaterial
           color={t.paper}
           emissive={t.lamp}
-          emissiveIntensity={theme === "dark" ? 0.55 : 0.12}
+          emissiveIntensity={theme === "dark" ? 0.9 : 0.12}
           roughness={0.9}
           side={THREE.DoubleSide}
         />
       </mesh>
-      {quality === "desktop" && theme === "dark" && (
-        <pointLight position={[0, 1.45, 0]} distance={2.4} decay={1.8} intensity={0.9} color={t.lamp} />
-      )}
+      <pointLight position={[0, 1.45, 0]} distance={4.5} decay={1.6} intensity={2.8 * t.practical} color={t.lamp} />
     </group>
   );
 }
@@ -1859,8 +1911,9 @@ function Desk({ theme }: { theme: ThemeName }) {
   useFrame((state) => {
     // the desk lamp warms up as you come over to it
     const near = THREE.MathUtils.clamp((4.2 - state.camera.position.distanceTo(here)) / 2.4, 0, 1);
-    if (lamp.current) lamp.current.intensity = 0.3 + near * 2.3;
-    if (bulbMaterial) bulbMaterial.emissiveIntensity = 0.15 + near * 1.2;
+    const on = t.practical;
+    if (lamp.current) lamp.current.intensity = 0.3 + on * 1.4 + near * 2.3;
+    if (bulbMaterial) bulbMaterial.emissiveIntensity = 0.15 + on * 0.6 + near * 1.2;
   });
 
   return (
@@ -1883,7 +1936,7 @@ function Desk({ theme }: { theme: ThemeName }) {
           <pointLight
             ref={lamp}
             position={[0.05, 0.36, 0.06]}
-            distance={2.6}
+            distance={3.2}
             decay={1.6}
             intensity={0.3}
             color={t.lamp}
@@ -3455,6 +3508,7 @@ export function ExploreScene({
     boardDocked: false,
   });
   const t = themes[theme];
+  const daylightFill = outsideDaylight(weather, theme) * (1 - (weather?.cloud ?? 0) * 0.3);
 
   return (
     <SceneCtx.Provider value={refs}>
@@ -3494,8 +3548,9 @@ export function ExploreScene({
           <color attach="background" args={[t.fog]} />
           <fog attach="fog" args={[t.fog, 5, 45]} />
 
-          <ambientLight intensity={t.ambient} />
-          <hemisphereLight args={[t.ceiling, t.wall, t.hemi]} />
+          {/* by day, light bounced in through the window fills the dark room a little */}
+          <ambientLight intensity={t.ambient + t.practical * daylightFill * 0.4} />
+          <hemisphereLight args={[t.ceiling, t.wall, t.hemi + t.practical * daylightFill * 0.35]} />
 
           <Room theme={theme} />
           {exploreItems.map((item) => (
