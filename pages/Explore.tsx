@@ -646,7 +646,7 @@ export function Explore() {
             }}
           >
             <Send style={{ height: 15, width: 15 }} />
-            {sendStatus === "sent" && !iconOnly ? "Sent — thank you" : iconOnly ? "" : "Send to John"}
+            {sendStatus === "sent" && !iconOnly ? "Sent, thanks" : iconOnly ? "" : "Send to John"}
           </button>
           <button type="button" aria-label="Done" onClick={leaveDrawing} style={actionStyle}>
             <Check style={{ height: 15, width: 15 }} />

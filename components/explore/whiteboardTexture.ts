@@ -91,11 +91,7 @@ export function makeWhiteboardTexture(
   ctx.globalAlpha = 1;
 
   const statLeft = columnEdge + 44;
-  ctx.font = '700 27px "DM Sans", "Helvetica Neue", sans-serif';
-  ctx.fillStyle = "#8a5a2f";
-  ctx.fillText("BY THE NUMBERS", statLeft, 52);
-
-  let statY = 112;
+  let statY = 90;
   stats.forEach((stat, i) => {
     ctx.font = '700 52px "DM Sans", "Helvetica Neue", sans-serif';
     ctx.fillStyle = i === 0 ? "#2f5d8a" : "#3d6b3a";

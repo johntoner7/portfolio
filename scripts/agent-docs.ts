@@ -57,7 +57,7 @@ ${projectList}
 ## Links
 
 - [Portfolio](${SITE}/): projects, skills and contact details
-- [3D room](${SITE}/explore): a walkable 3D office built with three.js (needs a browser with WebGL)
+- [3D room](${SITE}/explore): a 3D room you can walk around, built with three.js (needs a browser with WebGL)
 - [GitHub](${contact.github})
 - [LinkedIn](${contact.linkedin})
 

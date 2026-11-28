@@ -49,7 +49,7 @@ function ExternalLinks({ project }: { project: Project }) {
   );
 }
 
-function ProjectCard({ project, index, onTry }: { project: Project; index: number; onTry?: () => void }) {
+function ProjectCard({ project, onTry }: { project: Project; onTry?: () => void }) {
   return (
     <article className="flex flex-col overflow-hidden rounded-tile bg-surface">
       {/* the stills are 16:9 captures, so the frame is too: shown whole, never cropped or stretched */}
@@ -58,7 +58,7 @@ function ProjectCard({ project, index, onTry }: { project: Project; index: numbe
           <img src={project.preview.src} alt={project.preview.alt} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         )}
         <span className="absolute left-3 top-3 rounded-lg bg-page/85 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted sm:text-[11px]">
-          Plate 0{index + 1} · {project.signal.category}
+          {project.signal.category}
         </span>
       </div>
 
@@ -151,11 +151,10 @@ export function Projects() {
       <SectionHeader title="Live tools I have built." />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {siteData.projects.map((project, index) => (
+        {siteData.projects.map((project) => (
           <ProjectCard
             key={project.slug}
             project={project}
-            index={index}
             onTry={liveEmbeds[project.slug] ? () => setDemo(project) : undefined}
           />
         ))}

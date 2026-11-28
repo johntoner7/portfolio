@@ -173,7 +173,7 @@ if (spotify) {
     // a turntable on the record cabinet by the door, with the most played sleeves beside it
     id: "records",
     label: "Records",
-    title: "On rotation",
+    title: "Music",
     hook: `${spotify.hours} hours of music in the last 3 months, on ${spotify.daysWithMusic} of ${spotify.span} days.`,
     stats: [
       { value: `${spotify.hours}h`, label: "listened" },
@@ -222,7 +222,7 @@ if (running) {
     // a pair of trainers kicked off in the corner by the bookcase
     id: "running",
     label: "Running",
-    title: "Out the door",
+    title: "Running",
     hook: `${running.km} km over ${running.runs} runs in the last 3 months.`,
     stats: [
       { value: `${running.km} km`, label: "run" },

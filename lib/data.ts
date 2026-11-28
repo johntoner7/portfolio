@@ -56,7 +56,7 @@ export const siteData = {
     descriptor: "Software Engineer",
   },
   nav: {
-    // Places on the homepage, numbered in the phone menu like an atlas's plates.
+    // Places on the homepage.
     sections: [
       { label: "Work", href: "#projects" },
       { label: "About", href: "#about" },
@@ -101,7 +101,7 @@ export const siteData = {
       "I'm a software engineer at Symphony in Belfast, working on the systems that keep encrypted communications secure.",
       "I graduated from Queen's University Belfast in 2025 with a first-class BEng in Software Engineering.",
       "Before working at Symphony, I was a Senior Associate Software Engineer at PwC, working across Python services, React interfaces, Databricks pipelines, and AI-driven document processing.  I first worked at PwC on a 15-month placement as a degree apprentice, building Go backend services and React TypeScript interfaces from design through to deployment.",
-      "Outside of work I build open data tools. Two are publicly deployed, with one covering NI agricultural emissions, and the other mapping 35 years of river phosphorus data across 1,200 monitoring stations.",
+      "Outside of work I build open data tools. Two are publicly deployed, with one covering NI agricultural emissions, and the other mapping 35 years of river phosphorus data across 1,201 monitoring stations.",
     ],
     usageNotes: {
       Python: "Used professionally at PwC for data processing notebooks, PySpark optimisation, and API testing automation. Used in personal projects for ETL pipelines, Mann-Kendall trend analysis, and FastAPI backend services.",
@@ -160,7 +160,7 @@ export const siteData = {
       title: "NI Rivers Tool",
       slug: "lough-neagh-phosphorus-pipeline",
       signal: { category: "Environmental data", value: "170k+", label: "water-quality readings" },
-      hook: "Mapping river phosphorus data spanning 35 years across 1,200 monitoring stations.",
+      hook: "Mapping river phosphorus data spanning 35 years across 1,201 monitoring stations.",
       description:
         "FastAPI backend with PostGIS queries and a React frontend using Mapbox GL JS. Processes 170,000+ readings from government sources, with some stations holding records dating back to 1990.",
       stack: ["Python", "FastAPI", "PostGIS", "Mapbox GL JS", "Railway"],
@@ -177,7 +177,7 @@ export const siteData = {
       title: "Unmarked",
       slug: "unmarked-goals-map",
       signal: { category: "Football data", value: "70", label: "players mapped" },
-      hook: "Every stadium where a footballer has scored, mapped.",
+      hook: "A map of every stadium where a footballer has scored.",
       description:
         "Kotlin and Spring Boot REST API over PostgreSQL, with a Next.js frontend rendering per-player maps in Mapbox GL JS. A Python pipeline scrapes, geocodes and ingests match data for 70 players, giving per-stadium breakdowns of appearances, goals and assists alongside guess-the-player and daily challenge modes.",
       stack: ["Kotlin", "Spring Boot", "Next.js", "Mapbox GL JS", "PostgreSQL", "Python"],

@@ -167,9 +167,8 @@ export function Nav() {
                 ref={index === 0 ? firstLinkRef : undefined}
                 href={resolve(link.href)}
                 onClick={close}
-                className="flex items-baseline gap-3.5 border-b border-divider py-3.5 font-display text-[40px] leading-tight text-ink"
+                className="flex items-baseline border-b border-divider py-3.5 font-display text-[40px] leading-tight text-ink"
               >
-                <span className="font-mono text-xs text-data">0{index + 1}</span>
                 {link.label}
               </a>
             ))}

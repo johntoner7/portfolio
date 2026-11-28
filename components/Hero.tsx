@@ -29,8 +29,7 @@ function MapPlate() {
   return (
     <figure className="col-span-2 flex flex-col rounded-tile bg-surface/80 p-4 sm:p-6 md:col-span-1 md:row-span-2 lg:col-span-2 lg:min-h-0">
       <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted sm:text-[11px]">
-        <span>Plate 02 · Soluble phosphorus</span>
-        <span>54.6°N 6.7°W</span>
+        <span>Soluble phosphorus</span>
       </div>
 
       {/*
